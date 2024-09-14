@@ -73,7 +73,7 @@ func checkCertificate() error {
 		command := "openssl req -x509 -newkey rsa:4096 -nodes -sha256 -subj '/CN=localhost' -keyout private.pem -out cert.pem"
 		RunCommand(command)
 
-		command = "cat cert.pem private.pem | tee ssh.pem"
+		command = "awk '1' cert.pem private.pem > ssh.pem"
 		RunCommand(command)
 	}
 
@@ -244,7 +244,7 @@ func deleteHAPROXYServer(serverName string) error {
 	return nil
 }
 
-func runHaProxy(mainHaProxyPort string)error {
+func runHaProxy(mainHaProxyPort string) error {
 	path := createFolder(HAPROXY_FILE_FOLDER_NAME)
 	err := checkCertificate()
 	if err != nil {

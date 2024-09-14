@@ -15,6 +15,8 @@ import (
 tratar de docker images, nao é preciso criar a imagem se ja existir
 
 programar para evitar racetime conditions
+
+FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 */
 
 const HAPROXYPORT = "8080"
