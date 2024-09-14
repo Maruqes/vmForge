@@ -1,0 +1,27 @@
+# Use the official Ubuntu image as a base
+FROM ubuntu:20.04
+
+# Install required packages: OpenSSH, SSHFS, Node.js (for JavaScript)
+RUN apt-get update && \
+    apt-get install -y openssh-server sshfs curl && \
+    curl -fsSL https://deb.nodesource.com/setup_14.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean
+
+# Setup OpenSSH server
+RUN mkdir /var/run/sshd
+
+# Set root password
+RUN echo 'root:passwordToChange' | chpasswd
+
+# Configure SSH to allow password authentication
+RUN echo "Port 22" >> /etc/ssh/sshd_config && \
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+
+
+# Expose port 22 for SSH
+EXPOSE 22
+
+# Start the SSH service
+CMD ["/usr/sbin/sshd", "-D"]

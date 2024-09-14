@@ -1,0 +1,230 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+const DOCKER_FILE_FOLDER_NAME = "/dockerFiles"
+
+func checkDockerData(port string) error {
+	if port == "" {
+		return fmt.Errorf("port is empty")
+	}
+
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+	if portInt < 0 || portInt > 65535 {
+		return fmt.Errorf("port is invalid")
+	}
+	return nil
+}
+
+// deixa estar com panic pq isto tem de ser mudado
+func getDockerFiles(path string, rootPassword string) {
+	//open the file
+	exampleData := "testData/DockerFileExample"
+
+	newFile, err := os.Create(filepath.Join(path, "Dockerfile"))
+	if err != nil {
+		panic(err)
+	}
+	defer newFile.Close()
+
+	fileBytes := getFileBytes(exampleData)
+
+	fileBytes = bytes.ReplaceAll(fileBytes, []byte("passwordToChange"), []byte(rootPassword))
+	//copy the contents
+	_, err = newFile.Write(fileBytes)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func checkDockerImageExists(imageName string) bool {
+	command := fmt.Sprintf("docker images -q %s", imageName)
+	fmt.Println("Check if docker image exists: ", command)
+
+	lines, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	fmt.Println("lines: ", lines)
+	return len(lines) >= 1
+}
+
+func checkDockerImageRunning(dockerName string) error {
+	command := fmt.Sprintf("docker ps -a --filter name=%s", dockerName)
+	fmt.Println("Check if docker image is running: ", command)
+
+	lines, err := RunCommandWithReturn(command)
+	if err != nil {
+		return err
+	}
+	if len(lines) > 1 {
+		return fmt.Errorf("docker image %s is already running", dockerName)
+	}
+	return nil
+}
+
+func buildDockerImage(path string, imageName string) error {
+	existQ := checkDockerImageExists(imageName)
+	if existQ {
+		fmt.Println("Docker image already exists")
+		return fmt.Errorf("docker image already exists")
+	}
+
+	command := fmt.Sprintf("docker build -t %s %s", imageName, path)
+	fmt.Println(command)
+
+	_, err := RunCommandWithReturn(command)
+
+	if err != nil && !strings.Contains(err.Error(), "DONE") {
+		fmt.Println(err)
+		return err
+	}
+
+	existQ = checkDockerImageExists(imageName)
+
+	if existQ {
+		return nil
+	}
+
+	return fmt.Errorf("docker image %s was not found after being created", imageName)
+}
+
+func runDockerImage(imageName string, dockerName string, port string) error {
+	err := checkDockerData(port)
+	if err != nil {
+		fmt.Println("err1: ", err)
+		return err
+	}
+
+	err = checkDockerImageRunning(dockerName)
+	if err != nil {
+		fmt.Println("err1: ", err)
+		return err
+	}
+
+	command := fmt.Sprintf("docker run -d -p %s:22 --name %s %s", port, dockerName, imageName)
+	fmt.Println(command)
+	RunCommand(command)
+
+	err = checkDockerImageRunning(dockerName)
+	if err != nil {
+		return nil
+	}
+
+	return fmt.Errorf("Docker image %s failed to run was not found after being created ", dockerName)
+}
+
+func deleteDockerImage(imageName string) {
+	command := fmt.Sprintf("docker rmi -f %s", imageName)
+	fmt.Println(command)
+	RunCommand(command)
+}
+
+func deleteDockerContainer(dockerName string) {
+	command := fmt.Sprintf("docker rm -f %s", dockerName)
+	fmt.Println(command)
+	RunCommand(command)
+}
+
+func getAllDockerInfoJson() []string {
+	command := "docker ps -a --format '{{json .}}'"
+	fmt.Println(command)
+	ret, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return ret
+}
+
+func runDocker(password string, dockerPort string, imageDockerName string, serverName string) error {
+	path := createFolder(DOCKER_FILE_FOLDER_NAME)
+	getDockerFiles(path, password) // temporary way to get dockerFiles so need to change this
+
+	err := buildDockerImage(path, imageDockerName)
+	if err != nil {
+		fmt.Println("runDocker: ", err)
+		return err
+	}
+
+	err = runDockerImage(imageDockerName, serverName, dockerPort)
+	if err != nil {
+		fmt.Println("runDocker: ", err)
+		return err
+	}
+
+	return nil
+}
+
+func stopContainer(containerID string) error {
+	command := fmt.Sprintf("docker stop %s", containerID)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
+}
+
+func deleteContainer(containerID string) error {
+	command := fmt.Sprintf("docker rm %s", containerID)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
+}
+
+func startContainer(containerID string) error {
+	command := fmt.Sprintf("docker start %s", containerID)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
+}
+
+func restartContainer(containerID string) error {
+	command := fmt.Sprintf("docker restart %s", containerID)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
+}
+
+func findServerName(containerID string) string {
+	command := fmt.Sprintf("docker inspect %s --format='{{.Name}}'", containerID)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	strings.ReplaceAll(res[0], "/", "")
+
+	return res[0]
+}

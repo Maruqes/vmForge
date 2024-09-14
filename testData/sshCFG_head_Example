@@ -1,0 +1,7 @@
+frontend ssh
+    bind *:mainPort ssl crt haproxyFiles/ssh.pem
+    timeout client 60s
+    mode tcp
+    #ssl_fc_sni
+    tcp-request content set-var(sess.sni) ssl_fc_sni
+    use_backend %[ssl_fc_sni]

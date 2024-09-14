@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            padding: 20px;
+            position: fixed;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .sidebar h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            display: block;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar ul li a:hover {
+            background-color: #34495e;
+        }
+
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            flex: 1;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button.create {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button.create:hover {
+            background-color: #45a049;
+        }
+
+        button.delete {
+            background-color: #f44336;
+            color: white;
+        }
+
+        button.delete:hover {
+            background-color: #e53935;
+        }
+
+        button.restart {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        button.restart:hover {
+            background-color: #fb8c00;
+        }
+
+        button.start {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button.start:hover {
+            background-color: #45a049;
+        }
+
+        button.stop {
+            background-color: #f44336;
+            color: white;
+        }
+
+        button.stop:hover {
+            background-color: #e53935;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        ul li {
+            padding: 10px;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        ul li div {
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        ul li button {
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .modal-content button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-content button:hover {
+            background-color: #45a049;
+        }
+
+        .close-btn {
+            background-color: #f44336;
+            margin-left: 10px;
+        }
+
+        .close-btn:hover {
+            background-color: #e53935;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="#main-page">Main Page</a></li>
+            <li><a href="#docker-containers">Docker Images/Containers</a></li>
+            <li><a href="#haproxy-controller">HAProxy Controller</a></li>
+        </ul>
+    </div>
+
+    <div class="content" id="main-page">
+        <div class="container">
+            <h1>Server Management</h1>
+            <div class="button-group">
+                <button class="create">Create a Server</button>
+                <button class="restart">Restart All Servers</button>
+            </div>
+            <h2>List of Servers</h2>
+            <ul id="serverList">
+                <!-- Server list will be populated dynamically -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="createServerModal" class="modal">
+        <div class="modal-content">
+            <h2>Create a New Server</h2>
+            <label for="serverName">Server Name:</label>
+            <input type="text" id="serverName" placeholder="Enter server name">
+
+            <label for="dockerImage">Docker Image Name:</label>
+            <input type="text" id="dockerImage" placeholder="Enter Docker Image Name">
+
+            <label for="dockerPassword">Docker Password:</label>
+            <input type="password" id="dockerPassword" placeholder="Enter Docker Password">
+
+            <label for="haproxyPort">HAProxy Port:</label>
+            <input type="number" id="haproxyPort" placeholder="Enter HAProxy Port">
+
+            <button id="createServer">Create Server</button>
+            <button class="close-btn">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        setInterval(function () {
+            loadServers();
+        }, 5000);
+
+        // Get modal element
+        var modal = document.getElementById("createServerModal");
+
+        // Get the button that opens the modal
+        var btnCreate = document.querySelector(".create");
+
+        // Get the close button
+        var closeBtn = document.querySelector(".close-btn");
+
+        // When the user clicks the "Create a Server" button, open the modal
+        btnCreate.onclick = function () {
+            modal.style.display = "flex";
+        }
+
+        // When the user clicks the "Cancel" button, close the modal
+        closeBtn.onclick = function () {
+            modal.style.display = "none";
+        }
+
+        // Call API and get the server info
+        function loadServers() {
+            fetch('/getAllServersInfo')
+                .then(response => response.json())
+                .then(data => {
+                    const serverList = document.getElementById('serverList');
+                    serverList.innerHTML = ''; // Clear current list
+                    data.forEach(server => {
+                        const li = document.createElement('li');
+                        server = JSON.parse(server)
+                        li.innerHTML = `
+                            <div>
+                                <strong>Container ID:</strong> ${server.ID} <br>
+                                <strong>Image:</strong> ${server.Image} <br>
+                                <strong>Command:</strong> ${server.Command} <br>
+                                <strong>Created:</strong> ${server.CreatedAt} <br>
+                                <strong>State:</strong> ${server.State} <br>
+                                <strong>Status:</strong> ${server.Status} <br>
+                                <strong>Ports:</strong> ${server.Ports} <br>
+                                <strong>Name:</strong> ${server.Names} <br>
+                                <strong>Size:</strong> ${server.Size}
+                            </div>
+                            <div>
+                                <button class="start">Start</button>
+                                <button class="stop">Stop</button>
+                                <button class="restart">Restart</button>
+                                <button class="delete">Delete</button>
+                            </div>
+                        `;
+                        serverList.appendChild(li);
+
+                        // Attach delete, restart, start, and stop functionality
+                        attachDeleteEvent(li.querySelector('.delete'), server.ID);
+                        attachRestartEvent(li.querySelector('.restart'), server.ID);
+                        attachStartEvent(li.querySelector('.start'), server.ID);
+                        attachStopEvent(li.querySelector('.stop'), server.ID);
+                    });
+                })
+                .catch(error => console.error('Error fetching server data:', error));
+        }
+
+        // Delete server by container ID
+        function attachDeleteEvent(deleteBtn, containerID) {
+            deleteBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/deleteServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server deleted successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error deleting server:', error));
+            };
+        }
+
+        // Restart server by container ID
+        function attachRestartEvent(restartBtn, containerID) {
+            restartBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/restartServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server restarted successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error restarting server:', error));
+            };
+        }
+
+        // Start server by container ID
+        function attachStartEvent(startBtn, containerID) {
+            startBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/startServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server started successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error starting server:', error));
+            };
+        }
+
+        // Stop server by container ID
+        function attachStopEvent(stopBtn, containerID) {
+            stopBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/stopServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server stopped successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error stopping server:', error));
+            };
+        }
+
+        // Create new server via API call to /handleCreateNewDockerServer
+        document.getElementById("createServer").onclick = function () {
+            const serverName = document.getElementById("serverName").value;
+            const dockerImage = document.getElementById("dockerImage").value;
+            const dockerPassword = document.getElementById("dockerPassword").value;
+            const haproxyPort = document.getElementById("haproxyPort").value;
+
+            // Prepare data for the POST request
+            const formData = new FormData();
+            formData.append("serverName", serverName);
+            formData.append("dockerImageName", dockerImage);
+            formData.append("dockerPassword", dockerPassword);
+            formData.append("serverPort", haproxyPort);
+
+            // Send POST request to /handleCreateNewDockerServer
+            fetch('/handleCreateNewDockerServer', {
+                method: 'POST',
+                body: formData
+            })
+                .then(async response => {
+                    if (response.ok) {
+                        alert("Server created successfully!");
+                        modal.style.display = "none";
+                        loadServers(); // Reload the server list
+                    } else {
+                        text = await response.text();
+                        alert(text);
+                    }
+                })
+                .catch(error => console.error('Error creating server:', error));
+        };
+
+        // Load servers when the page is ready
+        window.onload = loadServers;
+    </script>
+
+</body>
+
+</html>

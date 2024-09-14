@@ -1,0 +1,5 @@
+backend serverName
+    timeout server 60s
+    timeout connect 60s
+    mode tcp
+    server serverInt localhost:serverPort check
