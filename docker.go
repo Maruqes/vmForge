@@ -107,34 +107,34 @@ func runDockerImage(imageName string, dockerName string, port string) error {
 		return err
 	}
 
-	err = checkDockerImageRunning(dockerName)
-	if err != nil {
-		fmt.Println("err1: ", err)
-		return err
-	}
-
 	command := fmt.Sprintf("docker run -d -p %s:22 --name %s %s", port, dockerName, imageName)
 	fmt.Println(command)
-	RunCommand(command)
+
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println("err2: ", err)
+	}
+
+	fmt.Println(res)
 
 	err = checkDockerImageRunning(dockerName)
 	if err != nil {
 		return nil
 	}
 
-	return fmt.Errorf("Docker image %s failed to run was not found after being created ", dockerName)
+	return fmt.Errorf("docker image %s failed to run was not found after being created ", dockerName)
 }
 
-func deleteDockerImage(imageName string) {
-	command := fmt.Sprintf("docker rmi -f %s", imageName)
+func setDockerPassword(password string, containerID string) error {
+	command := fmt.Sprintf("docker exec %s bash -c 'echo -e \"%s\n%s\" | passwd root'", containerID, password, password)
 	fmt.Println(command)
-	RunCommand(command)
-}
-
-func deleteDockerContainer(dockerName string) {
-	command := fmt.Sprintf("docker rm -f %s", dockerName)
-	fmt.Println(command)
-	RunCommand(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
 }
 
 func getAllDockerInfoJson() []string {
@@ -149,18 +149,22 @@ func getAllDockerInfoJson() []string {
 }
 
 func runDocker(password string, dockerPort string, imageDockerName string, serverName string) error {
-	path := createFolder(DOCKER_FILE_FOLDER_NAME)
-	getDockerFiles(path, password) // temporary way to get dockerFiles so need to change this
 
-	err := buildDockerImage(path, imageDockerName)
+	containerExists := checkDockerImageExists(imageDockerName)
+
+	if !containerExists {
+		return fmt.Errorf("docker image %s does not exist", imageDockerName)
+	}
+
+	err := runDockerImage(imageDockerName, serverName, dockerPort)
 	if err != nil {
 		fmt.Println("runDocker: ", err)
 		return err
 	}
 
-	err = runDockerImage(imageDockerName, serverName, dockerPort)
+	err = setDockerPassword(password, serverName)
 	if err != nil {
-		fmt.Println("runDocker: ", err)
+		fmt.Println("setDockerPassword: ", err)
 		return err
 	}
 
@@ -224,7 +228,20 @@ func findServerName(containerID string) string {
 		return ""
 	}
 
-	strings.ReplaceAll(res[0], "/", "")
+	res2 := strings.ReplaceAll(res[0], "/", "")
 
-	return res[0]
+	return res2
+}
+
+func checkIfDockerIameIsBuilt(name string) bool {
+	command := fmt.Sprintf("docker images -q %s", name)
+	fmt.Println("Check if docker image exists: ", command)
+
+	lines, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	fmt.Println("lines: ", lines)
+	return len(lines) >= 1
 }

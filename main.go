@@ -76,15 +76,14 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	serverName := r.FormValue("serverName")
 	serverPort := r.FormValue("serverPort")
 	dockerPassword := r.FormValue("dockerPassword")
-	dockerImageName := r.FormValue("dockerImageName")
 
-	infoOK := checkUserInput(serverName, serverPort, dockerPassword, dockerImageName)
+	infoOK := checkUserInput(serverName, serverPort, dockerPassword, "vm_forge_minimal")
 	if !infoOK {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	err := runDocker(dockerPassword, serverPort, dockerImageName, serverName)
+	err := runDocker(dockerPassword, serverPort, "vm_forge_minimal", serverName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -95,7 +94,6 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	err = createNewHAPROXYServer(serverName, getRandomServerInt(), serverPort)
 	if err != nil {
 		deleteContainer(serverName)
-		deleteDockerImage(dockerImageName)
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -194,6 +192,26 @@ func runWebsite() {
 }
 
 func main() {
+
+	built := checkIfDockerIameIsBuilt("vm_forge_minimal")
+
+	if !built {
+		path := createFolder(DOCKER_FILE_FOLDER_NAME)
+		getDockerFiles(path, "temp123") // temporary way to get dockerFiles so need to change this
+
+		err := buildDockerImage(path, "vm_forge_minimal")
+		if err != nil {
+			fmt.Println("runDocker: ", err)
+			return
+		}
+	}
+
+	built2 := checkIfDockerIameIsBuilt("vm_forge_minimal")
+
+	if !built2 {
+		fmt.Println("Error building docker image")
+		return
+	}
 
 	err := runHaProxy(HAPROXYPORT)
 	if err != nil {

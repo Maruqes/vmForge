@@ -257,9 +257,6 @@
             <label for="serverName">Server Name:</label>
             <input type="text" id="serverName" placeholder="Enter server name">
 
-            <label for="dockerImage">Docker Image Name:</label>
-            <input type="text" id="dockerImage" placeholder="Enter Docker Image Name">
-
             <label for="dockerPassword">Docker Password:</label>
             <input type="password" id="dockerPassword" placeholder="Enter Docker Password">
 
@@ -423,14 +420,12 @@
         // Create new server via API call to /handleCreateNewDockerServer
         document.getElementById("createServer").onclick = function () {
             const serverName = document.getElementById("serverName").value;
-            const dockerImage = document.getElementById("dockerImage").value;
             const dockerPassword = document.getElementById("dockerPassword").value;
             const haproxyPort = document.getElementById("haproxyPort").value;
 
             // Prepare data for the POST request
             const formData = new FormData();
             formData.append("serverName", serverName);
-            formData.append("dockerImageName", dockerImage);
             formData.append("dockerPassword", dockerPassword);
             formData.append("serverPort", haproxyPort);
 
