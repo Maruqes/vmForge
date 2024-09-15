@@ -1,5 +1,7 @@
 backend serverName
-    timeout server 60s
-    timeout connect 60s
+    stick-table type ip size 1m expire 1h
+    stick on src
+    timeout server 2147483647ms
+    timeout connect 2147483647ms
     mode tcp
     server serverInt localhost:serverPort check

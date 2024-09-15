@@ -2,11 +2,16 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
+	"golang.org/x/exp/rand"
 )
 
 const DOCKER_FILE_FOLDER_NAME = "/dockerFiles"
@@ -129,7 +134,7 @@ func setDockerPassword(password string, containerID string) error {
 	command := fmt.Sprintf("docker exec %s bash -c 'echo -e \"%s\n%s\" | passwd root'", containerID, password, password)
 	fmt.Println(command)
 	res, err := RunCommandWithReturn(command)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "password updated successfully") {
 		fmt.Println(err)
 		return err
 	}
@@ -139,13 +144,32 @@ func setDockerPassword(password string, containerID string) error {
 
 func getAllDockerInfoJson() []string {
 	command := "docker ps -a --format '{{json .}}'"
-	fmt.Println(command)
 	ret, err := RunCommandWithReturn(command)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
 	return ret
+}
+
+func isPortInUse(port int) bool {
+	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+func generatePort() (string, error) {
+	rand.Seed(uint64(time.Now().UnixNano())) // Ensure the seed is set to current time
+	for i := 0; i < 10; i++ {
+		port := 10000 + rand.Intn(55535)
+		if !isPortInUse(port) {
+			return strconv.Itoa(port), nil
+		}
+	}
+	return "", errors.New("could not generate an available port after 10 attempts")
 }
 
 func runDocker(password string, dockerPort string, imageDockerName string, serverName string) error {
@@ -233,7 +257,7 @@ func findServerName(containerID string) string {
 	return res2
 }
 
-func checkIfDockerIameIsBuilt(name string) bool {
+func checkIfDockerNameIsBuilt(name string) bool {
 	command := fmt.Sprintf("docker images -q %s", name)
 	fmt.Println("Check if docker image exists: ", command)
 

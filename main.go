@@ -74,8 +74,15 @@ func checkUserInput(serverName string, serverPort string, dockerPassword string,
 func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	//get the server name
 	serverName := r.FormValue("serverName")
-	serverPort := r.FormValue("serverPort")
 	dockerPassword := r.FormValue("dockerPassword")
+
+	serverPort, err := generatePort()
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
 
 	infoOK := checkUserInput(serverName, serverPort, dockerPassword, "vm_forge_minimal")
 	if !infoOK {
@@ -83,7 +90,7 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := runDocker(dockerPassword, serverPort, "vm_forge_minimal", serverName)
+	err = runDocker(dockerPassword, serverPort, "vm_forge_minimal", serverName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -93,6 +100,7 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 
 	err = createNewHAPROXYServer(serverName, getRandomServerInt(), serverPort)
 	if err != nil {
+		stopContainer(serverName)
 		deleteContainer(serverName)
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -170,6 +178,8 @@ func deleteServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	restartHaProxy(HAPROXYPORT)
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -192,8 +202,7 @@ func runWebsite() {
 }
 
 func main() {
-
-	built := checkIfDockerIameIsBuilt("vm_forge_minimal")
+	built := checkIfDockerNameIsBuilt("vm_forge_minimal")
 
 	if !built {
 		path := createFolder(DOCKER_FILE_FOLDER_NAME)
@@ -206,7 +215,7 @@ func main() {
 		}
 	}
 
-	built2 := checkIfDockerIameIsBuilt("vm_forge_minimal")
+	built2 := checkIfDockerNameIsBuilt("vm_forge_minimal")
 
 	if !built2 {
 		fmt.Println("Error building docker image")

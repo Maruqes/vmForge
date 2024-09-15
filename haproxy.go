@@ -86,11 +86,17 @@ func checkCertificate() error {
 
 }
 
+func killOtherHaProxyProcesses() {
+	command := "pkill haproxy"
+	RunCommand(command)
+}
+
 var cmdHaProxy *exec.Cmd
 
 func runHaProxuProcess() {
+	killOtherHaProxyProcesses()
 
-	command := "haproxy -f " + "." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.cfg"
+	command := "haproxy -D -f " + "." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.cfg -p ." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.pid"
 	log.Println(command)
 	log.Println("HAProxy is running")
 
@@ -254,17 +260,31 @@ func runHaProxy(mainHaProxyPort string) error {
 	servers := readServersBinary()
 	fmt.Println("servers: ", servers)
 
-	createHaProxyFiles(path, mainHaProxyPort, servers)
+	err = createHaProxyFiles(path, mainHaProxyPort, servers)
+	if err != nil {
+		return err
+	}
 	runHaProxuProcess()
 	return nil
 }
 
 func restartHaProxy(mainHaProxyPort string) {
-	TerminateCommand(cmdHaProxy)
+	fmt.Println("Restarting HAProxy")
+	servers := readServersBinary()
+	fmt.Println("servers: ", servers)
 
-	err := runHaProxy(mainHaProxyPort)
+	err := createHaProxyFiles("."+HAPROXY_FILE_FOLDER_NAME, mainHaProxyPort, servers)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
+
+	go func() {
+		command := "haproxy -D -f " + "." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.cfg -p ." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.pid -sf $(cat ." + HAPROXY_FILE_FOLDER_NAME + "/haproxy.pid)"
+		fmt.Println(command)
+		res, err := RunCommandWithReturn(command)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(res)
+	}()
 }

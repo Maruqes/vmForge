@@ -1,6 +1,7 @@
 frontend ssh
+    maxconn 10000
     bind *:mainPort ssl crt haproxyFiles/ssh.pem
-    timeout client 60s
+    timeout client 2147483647ms
     mode tcp
     #ssl_fc_sni
     tcp-request content set-var(sess.sni) ssl_fc_sni

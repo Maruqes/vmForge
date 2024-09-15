@@ -260,9 +260,6 @@
             <label for="dockerPassword">Docker Password:</label>
             <input type="password" id="dockerPassword" placeholder="Enter Docker Password">
 
-            <label for="haproxyPort">HAProxy Port:</label>
-            <input type="number" id="haproxyPort" placeholder="Enter HAProxy Port">
-
             <button id="createServer">Create Server</button>
             <button class="close-btn">Cancel</button>
         </div>
@@ -421,13 +418,11 @@
         document.getElementById("createServer").onclick = function () {
             const serverName = document.getElementById("serverName").value;
             const dockerPassword = document.getElementById("dockerPassword").value;
-            const haproxyPort = document.getElementById("haproxyPort").value;
-
+            
             // Prepare data for the POST request
             const formData = new FormData();
             formData.append("serverName", serverName);
             formData.append("dockerPassword", dockerPassword);
-            formData.append("serverPort", haproxyPort);
 
             // Send POST request to /handleCreateNewDockerServer
             fetch('/handleCreateNewDockerServer', {
