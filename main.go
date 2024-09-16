@@ -22,15 +22,6 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
 
-type DockerInfo struct {
-	ContainerID string `json:"containerID"`
-	Image       string `json:"image"`
-	Command     string `json:"command"`
-	Created     string `json:"created"`
-	Status      string `json:"status"`
-	Ports       string `json:"ports"`
-	Name        string `json:"name"`
-}
 
 func getAllServersInfo(w http.ResponseWriter, r *http.Request) {
 	dockerInfo := getAllDockerInfoJson()
@@ -75,6 +66,8 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	//get the server name
 	serverName := r.FormValue("serverName")
 	dockerPassword := r.FormValue("dockerPassword")
+
+	serverName = "vmForge_" + serverName
 
 	serverPort, err := generatePort()
 	if err != nil {
