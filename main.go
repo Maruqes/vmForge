@@ -22,7 +22,6 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
 
-
 func getAllServersInfo(w http.ResponseWriter, r *http.Request) {
 	dockerInfo := getAllDockerInfoJson()
 
