@@ -8,7 +8,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            background-color: #1e1e1e;
+            color: #ecf0f1;
             margin: 0;
             padding: 0;
             display: flex;
@@ -26,7 +27,7 @@
         }
 
         .sidebar h2 {
-            color: white;
+            color: #ecf0f1;
             text-align: center;
             margin-bottom: 30px;
         }
@@ -41,7 +42,7 @@
         }
 
         .sidebar ul li a {
-            color: white;
+            color: #ecf0f1;
             text-decoration: none;
             font-size: 18px;
             display: block;
@@ -58,20 +59,21 @@
             margin-left: 250px;
             padding: 20px;
             flex: 1;
-            background-color: #f4f4f9;
+            background-color: #1e1e1e;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: #2c3e50;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             border-radius: 8px;
         }
 
-        h1 {
-            text-align: center;
+        h1,
+        h2 {
+            color: #ecf0f1;
         }
 
         .button-group {
@@ -87,51 +89,47 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            color: #ecf0f1;
         }
 
         button.create {
-            background-color: #4CAF50;
-            color: white;
+            background-color: #27ae60;
         }
 
         button.create:hover {
-            background-color: #45a049;
+            background-color: #2ecc71;
         }
 
         button.delete {
-            background-color: #f44336;
-            color: white;
+            background-color: #F03A47;
         }
 
         button.delete:hover {
-            background-color: #e53935;
+            background-color: #c0392b;
         }
 
         button.restart {
-            background-color: #ff9800;
-            color: white;
+            background-color: #FFA630;
         }
 
         button.restart:hover {
-            background-color: #fb8c00;
+            background-color: #e67e22;
         }
 
         button.start {
-            background-color: #4CAF50;
-            color: white;
+            background-color: #27ae60;
         }
 
         button.start:hover {
-            background-color: #45a049;
+            background-color: #2ecc71;
         }
 
         button.stop {
-            background-color: #f44336;
-            color: white;
+            background-color: #F03A47;
         }
 
         button.stop:hover {
-            background-color: #e53935;
+            background-color: #c0392b;
         }
 
         ul {
@@ -141,13 +139,14 @@
 
         ul li {
             padding: 10px;
-            background-color: #f1f1f1;
-            border: 1px solid #ddd;
+            background-color: #34495e;
+            border: 1px solid #2c3e50;
             border-radius: 5px;
             margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: #ecf0f1;
         }
 
         ul li div {
@@ -170,18 +169,19 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.8);
             justify-content: center;
             align-items: center;
         }
 
         .modal-content {
-            background-color: #fff;
+            background-color: #2c3e50;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             max-width: 500px;
             width: 100%;
+            color: #ecf0f1;
         }
 
         .modal-content h2 {
@@ -197,12 +197,14 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #34495e;
             border-radius: 5px;
+            background-color: #34495e;
+            color: #ecf0f1;
         }
 
         .modal-content button {
-            background-color: #4CAF50;
+            background-color: #27ae60;
             color: white;
             padding: 10px 20px;
             border: none;
@@ -211,16 +213,16 @@
         }
 
         .modal-content button:hover {
-            background-color: #45a049;
+            background-color: #2ecc71;
         }
 
         .close-btn {
-            background-color: #f44336;
+            background-color: #e74c3c;
             margin-left: 10px;
         }
 
         .close-btn:hover {
-            background-color: #e53935;
+            background-color: #c0392b;
         }
     </style>
 </head>
@@ -230,9 +232,9 @@
     <div class="sidebar">
         <h2>Menu</h2>
         <ul>
-            <li><a href="#main-page">Main Page</a></li>
-            <li><a href="#docker-containers">Docker Images/Containers</a></li>
-            <li><a href="#haproxy-controller">HAProxy Controller</a></li>
+            <li><a href="/">Main Page</a></li>
+            <li><a href="/docker-containers">Docker Images/Containers</a></li>
+            <li><a href="/haproxy-controller">HAProxy Controller</a></li>
         </ul>
     </div>
 
@@ -241,7 +243,7 @@
             <h1>Server Management</h1>
             <div class="button-group">
                 <button class="create">Create a Server</button>
-                <button class="restart">Restart All Servers</button>
+                <button style="background-color: #FFA630;" class="rePagestart">Restart All Servers</button>
             </div>
             <h2>List of Servers</h2>
             <ul id="serverList">
@@ -266,7 +268,8 @@
     </div>
 
     <script>
-        setInterval(function () {
+        setInterval(function ()
+        {
             loadServers();
         }, 5000);
 
@@ -280,26 +283,32 @@
         var closeBtn = document.querySelector(".close-btn");
 
         // When the user clicks the "Create a Server" button, open the modal
-        btnCreate.onclick = function () {
+        btnCreate.onclick = function ()
+        {
             modal.style.display = "flex";
         }
 
         // When the user clicks the "Cancel" button, close the modal
-        closeBtn.onclick = function () {
+        closeBtn.onclick = function ()
+        {
             modal.style.display = "none";
         }
 
         // Call API and get the server info
-        function loadServers() {
+        function loadServers()
+        {
             fetch('/getAllServersInfo')
                 .then(response => response.json())
-                .then(data => {
+                .then(data =>
+                {
                     const serverList = document.getElementById('serverList');
                     serverList.innerHTML = ''; // Clear current list
-                    data.forEach(server => {
+                    data.forEach(server =>
+                    {
                         const li = document.createElement('li');
                         server = JSON.parse(server)
-                        if (!server.Image.includes("vm_forge_minimal")) {
+                        if (!server.Image.includes("vm_forge_minimal"))
+                        {
                             return;
                         }
                         li.innerHTML = `
@@ -334,18 +343,23 @@
         }
 
         // Delete server by container ID
-        function attachDeleteEvent(deleteBtn, containerID) {
-            deleteBtn.onclick = function () {
+        function attachDeleteEvent(deleteBtn, containerID)
+        {
+            deleteBtn.onclick = function ()
+            {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/deleteServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response => {
-                        if (response.ok) {
+                    .then(async response =>
+                    {
+                        if (response.ok)
+                        {
                             alert('Server deleted successfully!');
-                        } else {
+                        } else
+                        {
                             text = await response.text();
                             alert(text);
                         }
@@ -355,18 +369,23 @@
         }
 
         // Restart server by container ID
-        function attachRestartEvent(restartBtn, containerID) {
-            restartBtn.onclick = function () {
+        function attachRestartEvent(restartBtn, containerID)
+        {
+            restartBtn.onclick = function ()
+            {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/restartServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response => {
-                        if (response.ok) {
+                    .then(async response =>
+                    {
+                        if (response.ok)
+                        {
                             alert('Server restarted successfully!');
-                        } else {
+                        } else
+                        {
                             text = await response.text();
                             alert(text);
                         }
@@ -376,18 +395,23 @@
         }
 
         // Start server by container ID
-        function attachStartEvent(startBtn, containerID) {
-            startBtn.onclick = function () {
+        function attachStartEvent(startBtn, containerID)
+        {
+            startBtn.onclick = function ()
+            {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/startServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response => {
-                        if (response.ok) {
+                    .then(async response =>
+                    {
+                        if (response.ok)
+                        {
                             alert('Server started successfully!');
-                        } else {
+                        } else
+                        {
                             text = await response.text();
                             alert(text);
                         }
@@ -397,18 +421,23 @@
         }
 
         // Stop server by container ID
-        function attachStopEvent(stopBtn, containerID) {
-            stopBtn.onclick = function () {
+        function attachStopEvent(stopBtn, containerID)
+        {
+            stopBtn.onclick = function ()
+            {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/stopServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response => {
-                        if (response.ok) {
+                    .then(async response =>
+                    {
+                        if (response.ok)
+                        {
                             alert('Server stopped successfully!');
-                        } else {
+                        } else
+                        {
                             text = await response.text();
                             alert(text);
                         }
@@ -418,7 +447,8 @@
         }
 
         // Create new server via API call to /handleCreateNewDockerServer
-        document.getElementById("createServer").onclick = function () {
+        document.getElementById("createServer").onclick = function ()
+        {
             const serverName = document.getElementById("serverName").value;
             const dockerPassword = document.getElementById("dockerPassword").value;
 
@@ -432,12 +462,15 @@
                 method: 'POST',
                 body: formData
             })
-                .then(async response => {
-                    if (response.ok) {
+                .then(async response =>
+                {
+                    if (response.ok)
+                    {
                         alert("Server created successfully!");
                         modal.style.display = "none";
                         loadServers(); // Reload the server list
-                    } else {
+                    } else
+                    {
                         text = await response.text();
                         alert(text);
                     }

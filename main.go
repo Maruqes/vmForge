@@ -179,6 +179,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "website/html.html")
 }
 
+func handlerHaProxy(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "website/haproxy.html")
+}
+
+func handlerDockerController(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "website/dockercontainers.html")
+}
+
 func runWebsite() {
 	http.HandleFunc("/handleCreateNewDockerServer", handleCreateNewDockerServer)
 	http.HandleFunc("/getAllServersInfo", getAllServersInfo)
@@ -188,6 +196,8 @@ func runWebsite() {
 	http.HandleFunc("/deleteServer", deleteServer)
 
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/haproxy-controller", handlerHaProxy)
+	http.HandleFunc("/docker-containers", handlerDockerController)
 
 	fmt.Println("Running website on port", WEBSVPORT)
 	log.Fatal(http.ListenAndServe(WEBSVPORT, nil))
