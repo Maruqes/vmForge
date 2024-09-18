@@ -257,7 +257,7 @@ func findServerName(containerID string) string {
 	return res2
 }
 
-func checkIfDockerNameIsBuilt(name string) bool {
+func checkIfDockerNameIsBuiltCommand(name string) bool {
 	command := fmt.Sprintf("docker images -q %s", name)
 	fmt.Println("Check if docker image exists: ", command)
 
@@ -268,4 +268,26 @@ func checkIfDockerNameIsBuilt(name string) bool {
 	}
 	fmt.Println("lines: ", lines)
 	return len(lines) >= 1
+}
+
+func checkIfDockerImageIsBuilt(name string) bool {
+	built := checkIfDockerNameIsBuiltCommand(name)
+
+	if !built {
+		path := createFolder(DOCKER_FILE_FOLDER_NAME)
+
+		//place dockerfile on folder
+		getDockerFiles(path, "temp123") // temporary way to get dockerFiles so need to change this
+
+		err := buildDockerImage(path, name)
+		if err != nil {
+			fmt.Println("runDocker: ", err)
+			return false
+		}
+	}
+
+	built2 := checkIfDockerNameIsBuiltCommand(name)
+
+	return built2
+
 }

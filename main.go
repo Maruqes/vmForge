@@ -66,6 +66,10 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	serverName := r.FormValue("serverName")
 	dockerPassword := r.FormValue("dockerPassword")
 
+	//vm_forge_minimal simple server
+	//vm_forge_minJava with java with project (Folder/Main.java/Makefile)
+	serverExample := "vm_forge_minJava"
+
 	serverName = "vmForge_" + serverName
 
 	serverPort, err := generatePort()
@@ -76,13 +80,13 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	infoOK := checkUserInput(serverName, serverPort, dockerPassword, "vm_forge_minimal")
+	infoOK := checkUserInput(serverName, serverPort, dockerPassword, serverExample)
 	if !infoOK {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	err = runDocker(dockerPassword, serverPort, "vm_forge_minimal", serverName)
+	err = runDocker(dockerPassword, serverPort, serverExample, serverName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -204,22 +208,14 @@ func runWebsite() {
 }
 
 func main() {
-	built := checkIfDockerNameIsBuilt("vm_forge_minimal")
-
-	if !built {
-		path := createFolder(DOCKER_FILE_FOLDER_NAME)
-		getDockerFiles(path, "temp123") // temporary way to get dockerFiles so need to change this
-
-		err := buildDockerImage(path, "vm_forge_minimal")
-		if err != nil {
-			fmt.Println("runDocker: ", err)
-			return
-		}
+	built0 := checkIfDockerImageIsBuilt("vm_forge_minimal")
+	if !built0 {
+		fmt.Println("Error building docker image")
+		return
 	}
 
-	built2 := checkIfDockerNameIsBuilt("vm_forge_minimal")
-
-	if !built2 {
+	built1 := checkIfDockerImageIsBuilt("vm_forge_minJava")
+	if !built1 {
 		fmt.Println("Error building docker image")
 		return
 	}

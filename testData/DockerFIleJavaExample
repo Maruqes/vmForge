@@ -1,0 +1,31 @@
+# Use the official Ubuntu image as a base
+FROM ubuntu:20.04
+
+# Install required packages: OpenSSH, SSHFS, Node.js (for JavaScript)
+RUN apt-get update && \
+    apt-get install -y openssh-server sshfs curl && \
+    apt-get clean
+
+# Setup OpenSSH server
+RUN mkdir /var/run/sshd
+
+# Set root password
+RUN echo 'root:passwordToChange' | chpasswd
+
+# Configure SSH to allow password authentication
+RUN echo "Port 22" >> /etc/ssh/sshd_config && \
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+
+RUN mkdir /root/ProjectName && \
+    touch /root/ProjectName/Main.Java
+
+# Create a Makefile with predefined text
+RUN echo -e "all:\n\tjavac Main.java\n\tjava Main" > /root/ProjectName/Makefile
+
+
+# Expose port 22 for SSH
+EXPOSE 22
+
+# Start the SSH service
+CMD ["/usr/sbin/sshd", "-D"]
