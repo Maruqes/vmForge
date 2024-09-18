@@ -32,9 +32,8 @@ func checkDockerData(port string) error {
 }
 
 // deixa estar com panic pq isto tem de ser mudado
-func getDockerFiles(path string, rootPassword string) {
+func getDockerFiles(path string, rootPassword string, dockerfile string) {
 	//open the file
-	exampleData := "testData/DockerFileExample"
 
 	newFile, err := os.Create(filepath.Join(path, "Dockerfile"))
 	if err != nil {
@@ -42,7 +41,7 @@ func getDockerFiles(path string, rootPassword string) {
 	}
 	defer newFile.Close()
 
-	fileBytes := getFileBytes(exampleData)
+	fileBytes := getFileBytes(dockerfile)
 
 	fileBytes = bytes.ReplaceAll(fileBytes, []byte("passwordToChange"), []byte(rootPassword))
 	//copy the contents
@@ -270,17 +269,17 @@ func checkIfDockerNameIsBuiltCommand(name string) bool {
 	return len(lines) >= 1
 }
 
-func checkIfDockerImageIsBuilt(name string) bool {
+func checkIfDockerImageIsBuilt(name string, dockerFile string) bool {
 	built := checkIfDockerNameIsBuiltCommand(name)
 
 	if !built {
 		path := createFolder(DOCKER_FILE_FOLDER_NAME)
 
 		//place dockerfile on folder
-		getDockerFiles(path, "temp123") // temporary way to get dockerFiles so need to change this
+		getDockerFiles(path, "temp123", dockerFile) // temporary way to get dockerFiles so need to change this
 
 		err := buildDockerImage(path, name)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "docker image already exists") {
 			fmt.Println("runDocker: ", err)
 			return false
 		}

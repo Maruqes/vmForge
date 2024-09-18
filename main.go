@@ -22,6 +22,16 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
 
+type DockerConstInfo struct {
+	ImageName string `json:"imageName"`
+	Path      string `json:"path"`
+}
+
+var dockerConstInfo = []DockerConstInfo{
+	{"vm_forge_minimal", "testData/DockerFileExample"},
+	{"vm_forge_min_java", "testData/DockerFileJavaExample"},
+}
+
 func getAllServersInfo(w http.ResponseWriter, r *http.Request) {
 	dockerInfo := getAllDockerInfoJson()
 
@@ -65,10 +75,20 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	//get the server name
 	serverName := r.FormValue("serverName")
 	dockerPassword := r.FormValue("dockerPassword")
+	serverExample := r.FormValue("serverExample")
 
-	//vm_forge_minimal simple server
-	//vm_forge_minJava with java with project (Folder/Main.java/Makefile)
-	serverExample := "vm_forge_minJava"
+	dockerImage := "null"
+	for i := 0; i < len(dockerConstInfo); i++ {
+		if dockerConstInfo[i].ImageName == serverExample {
+			dockerImage = dockerConstInfo[i].ImageName
+			break
+		}
+	}
+
+	if dockerImage == "null" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	serverName = "vmForge_" + serverName
 
@@ -80,13 +100,13 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	infoOK := checkUserInput(serverName, serverPort, dockerPassword, serverExample)
+	infoOK := checkUserInput(serverName, serverPort, dockerPassword, dockerImage)
 	if !infoOK {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	err = runDocker(dockerPassword, serverPort, serverExample, serverName)
+	err = runDocker(dockerPassword, serverPort, dockerImage, serverName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -191,7 +211,25 @@ func handlerDockerController(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "website/dockercontainers.html")
 }
 
+func getImageNames(w http.ResponseWriter, r *http.Request) {
+	//convert to json
+	json, err := json.Marshal(dockerConstInfo)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+func getDockerPort(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(HAPROXYPORT))
+}
+
 func runWebsite() {
+	http.HandleFunc("/getDockerPort", getDockerPort)
+	http.HandleFunc("/getImageNames", getImageNames)
 	http.HandleFunc("/handleCreateNewDockerServer", handleCreateNewDockerServer)
 	http.HandleFunc("/getAllServersInfo", getAllServersInfo)
 	http.HandleFunc("/stopServer", stopServer)
@@ -208,16 +246,13 @@ func runWebsite() {
 }
 
 func main() {
-	built0 := checkIfDockerImageIsBuilt("vm_forge_minimal")
-	if !built0 {
-		fmt.Println("Error building docker image")
-		return
-	}
 
-	built1 := checkIfDockerImageIsBuilt("vm_forge_minJava")
-	if !built1 {
-		fmt.Println("Error building docker image")
-		return
+	for i := 0; i < len(dockerConstInfo); i++ {
+		built0 := checkIfDockerImageIsBuilt(dockerConstInfo[i].ImageName, dockerConstInfo[i].Path)
+		if !built0 {
+			fmt.Printf("Error building docker image on image %s\n", dockerConstInfo[i].ImageName)
+			return
+		}
 	}
 
 	err := runHaProxy(HAPROXYPORT)
