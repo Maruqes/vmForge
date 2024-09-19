@@ -353,12 +353,16 @@ func SetCookies(w http.ResponseWriter, username string, token string) {
 		Value:    username,
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -366,6 +370,8 @@ func SetCookies(w http.ResponseWriter, username string, token string) {
 		Value:    time.Now().Add(7 * 24 * time.Hour).Format(time.RFC3339),
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
 	})
 }
 
@@ -404,6 +410,7 @@ func refreshCookies(w http.ResponseWriter, r *http.Request) {
 
 	SetCookies(w, username, newToken)
 
+	redirectToMainPage(w)
 	fmt.Println("Cookies refreshed for user: " + username)
 }
 

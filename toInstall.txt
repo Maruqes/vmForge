@@ -1,5 +1,6 @@
 sudo apt install haproxy
 docker
-
+apt install sqlite3
+apt install sqlite-utils
 
 
