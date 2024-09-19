@@ -4,3 +4,6 @@ apt install sqlite3
 apt install sqlite-utils
 
 
+todo :
+// ver racetime nas condicoes
+// testar auth

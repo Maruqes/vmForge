@@ -127,7 +127,6 @@ func redirectToMainPage(w http.ResponseWriter) {
 		`)
 }
 
-// ver racetime nas condicoes
 func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	username, token := readUserCookies(r)
 	loginIn, err := auth.loginWithWebToken(username, token)
