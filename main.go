@@ -113,6 +113,8 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("Creating new server with name: %s, port: %s, dockerPassword: %s, dockerImage: %s\n", serverName, serverPort, dockerPassword, dockerImage)
+
 	infoOK := checkUserInput(serverName, serverPort, dockerPassword, dockerImage)
 	if infoOK != nil {
 		fmt.Println(infoOK)

@@ -60,7 +60,6 @@ func checkDockerImageExists(imageName string) bool {
 		fmt.Println(err)
 		return false
 	}
-	fmt.Println("lines: ", lines)
 	return len(lines) >= 1
 }
 
@@ -131,13 +130,11 @@ func runDockerImage(imageName string, dockerName string, port string) error {
 
 func setDockerPassword(password string, containerID string) error {
 	command := fmt.Sprintf("docker exec %s bash -c 'echo -e \"%s\n%s\" | passwd root'", containerID, password, password)
-	fmt.Println(command)
-	res, err := RunCommandWithReturn(command)
+	_, err := RunCommandWithReturn(command)
 	if err != nil && !strings.Contains(err.Error(), "password updated successfully") {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(res)
 	return nil
 }
 
