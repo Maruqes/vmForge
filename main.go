@@ -53,21 +53,34 @@ func getRandomServerInt() string {
 	return "s" + randS.String()
 }
 
-func checkUserInput(serverName string, serverPort string, dockerPassword string, dockerImageName string) bool {
+func checkUserInput(serverName string, serverPort string, dockerPassword string, dockerImageName string) error {
 	if serverName == "" || serverPort == "" || dockerPassword == "" || dockerImageName == "" {
-		return false
+		return fmt.Errorf("Empty fields")
+	}
+
+	if containsWhitespace(serverName) || containsWhitespace(serverPort) || containsWhitespace(dockerPassword) || containsWhitespace(dockerImageName) {
+		return fmt.Errorf("Fields contain whitespace")
 	}
 
 	serverPortInt, err := strconv.Atoi(serverPort)
 	if err != nil {
-		return false
+		return fmt.Errorf("Port is not a number")
 	}
 
 	if serverPortInt < 0 || serverPortInt > 65535 {
-		return false
+		return fmt.Errorf("Port is invalid")
 	}
 
-	return true
+	return nil
+}
+
+func containsWhitespace(s string) bool {
+	for _, r := range s {
+		if r == ' ' {
+			return true
+		}
+	}
+	return false
 }
 
 // ver racetime nas condicoes
@@ -101,9 +114,10 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	infoOK := checkUserInput(serverName, serverPort, dockerPassword, dockerImage)
-	if !infoOK {
+	if infoOK != nil {
+		fmt.Println(infoOK)
 		w.WriteHeader(http.StatusBadRequest)
-		return
+		w.Write([]byte(infoOK.Error()))
 	}
 
 	err = runDocker(dockerPassword, serverPort, dockerImage, serverName)
