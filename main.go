@@ -336,12 +336,7 @@ func handlerDockerController(w http.ResponseWriter, r *http.Request) {
 
 func loginPage(w http.ResponseWriter, r *http.Request) {
 	username, token := readUserCookies(r)
-	loginIn, err := auth.loginWithWebToken(username, token)
-	if err != nil && err.Error() != "user not logged in" {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	loginIn, _ := auth.loginWithWebToken(username, token)
 
 	if loginIn {
 		w.WriteHeader(http.StatusOK)
