@@ -55,20 +55,20 @@ func getRandomServerInt() string {
 
 func checkUserInput(serverName string, serverPort string, dockerPassword string, dockerImageName string) error {
 	if serverName == "" || serverPort == "" || dockerPassword == "" || dockerImageName == "" {
-		return fmt.Errorf("Empty fields")
+		return fmt.Errorf("empty fields")
 	}
 
 	if containsWhitespace(serverName) || containsWhitespace(serverPort) || containsWhitespace(dockerPassword) || containsWhitespace(dockerImageName) {
-		return fmt.Errorf("Fields contain whitespace")
+		return fmt.Errorf("fields contain whitespace")
 	}
 
 	serverPortInt, err := strconv.Atoi(serverPort)
 	if err != nil {
-		return fmt.Errorf("Port is not a number")
+		return fmt.Errorf("port is not a number")
 	}
 
 	if serverPortInt < 0 || serverPortInt > 65535 {
-		return fmt.Errorf("Port is invalid")
+		return fmt.Errorf("port is invalid")
 	}
 
 	return nil
@@ -118,6 +118,7 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(infoOK)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(infoOK.Error()))
+		return
 	}
 
 	err = runDocker(dockerPassword, serverPort, dockerImage, serverName)
