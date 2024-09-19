@@ -18,7 +18,7 @@ RUN echo "Port 22" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
 
 RUN mkdir /root/ProjectName && \
-    touch /root/ProjectName/Main.Java
+    touch /root/ProjectName/Main.java
 
 # Create a Makefile with predefined text
 RUN echo -e "all:\n\tjavac Main.java\n\tjava Main" > /root/ProjectName/Makefile
