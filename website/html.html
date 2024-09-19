@@ -321,35 +321,67 @@
     </div>
 
     <script>
+        //check expiration date of tokens
+        function getCookie(name) {
+            let cookieArr = document.cookie.split(";");
+            for (let i = 0; i < cookieArr.length; i++) {
+                let cookiePair = cookieArr[i].split("=");
+                if (name == cookiePair[0].trim()) {
+                    return decodeURIComponent(cookiePair[1]);
+                }
+            }
+            return null;
+        }
+
+        const exp_date = getCookie("login_expiration_date");
+        if (exp_date) {
+            const date = new Date();
+            const expDateObj = new Date(exp_date);
+            const timeDifference = expDateObj - date;
+
+            if (timeDifference > 0) {
+                const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+                console.log(`Token expires in ${days} days, ${hours} hours, ${minutes} minutes, and ${seconds} seconds.`);
+
+                if (days < 5) {
+                    window.location.href = '/refreshCookie';
+                }
+            } else {
+                console.log("Token has already expired.");
+            }
+        } else {
+            console.log("Token not found");
+        }
+
+
         const imageSelect = document.getElementById('imageSelect');
 
         // Function to fetch image names from /getImageNames and populate the dropdown
-        function fetchImageNames()
-        {
+        function fetchImageNames() {
             fetch('/getImageNames')
                 .then(response => response.json())  // Parse the JSON response
-                .then(data =>
-                {
+                .then(data => {
                     imageSelect.innerHTML = '';
 
                     // Populate the dropdown with imageName values
-                    data.forEach(item =>
-                    {
+                    data.forEach(item => {
                         const newOption = document.createElement('option');
                         newOption.value = item.imageName;  // Set value to imageName
                         newOption.textContent = item.imageName;  // Set visible text to imageName
                         imageSelect.appendChild(newOption);  // Append to dropdown
                     });
                 })
-                .catch(error =>
-                {
+                .catch(error => {
                     console.error('Error fetching image names:', error);  // Log errors if any
                 });
         }
         fetchImageNames();
 
-        setInterval(function ()
-        {
+        setInterval(function () {
             loadServers();
         }, 5000);
 
@@ -363,14 +395,12 @@
         var closeBtn = document.querySelector(".close-btn");
 
         // When the user clicks the "Create a Server" button, open the modal
-        btnCreate.onclick = function ()
-        {
+        btnCreate.onclick = function () {
             modal.style.display = "flex";
         }
 
         // When the user clicks the "Cancel" button, close the modal
-        closeBtn.onclick = function ()
-        {
+        closeBtn.onclick = function () {
             modal.style.display = "none";
         }
 
@@ -380,28 +410,23 @@
         currentLocation = currentLocation.split(':')[0];
         fetch('/getDockerPort')
             .then(response => response.json())
-            .then(data =>
-            {
+            .then(data => {
                 dockerPort = data;
                 console.log("Docker port: ", dockerPort);
             })
             .catch(error => console.error('Error fetching Docker port:', error));
 
         // Call API and get the server info
-        function loadServers()
-        {
+        function loadServers() {
             fetch('/getAllServersInfo')
                 .then(response => response.json())
-                .then(data =>
-                {
+                .then(data => {
                     const serverList = document.getElementById('serverList');
                     serverList.innerHTML = ''; // Clear current list
-                    data.forEach(server =>
-                    {
+                    data.forEach(server => {
                         const li = document.createElement('li');
                         server = JSON.parse(server)
-                        if (!server.Image.includes("vm_forge"))
-                        {
+                        if (!server.Image.includes("vm_forge")) {
                             return;
                         }
                         li.innerHTML = `
@@ -447,37 +472,28 @@
                 .catch(error => console.error('Error fetching server data:', error));
         }
 
-        function attachCopyEvent(copyBtn, textToCopy)
-        {
-            copyBtn.onclick = function ()
-            {
-                navigator.clipboard.writeText(textToCopy).then(() =>
-                {
-                }).catch(err =>
-                {
+        function attachCopyEvent(copyBtn, textToCopy) {
+            copyBtn.onclick = function () {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                }).catch(err => {
                     console.error('Error copying text: ', err);
                 });
             };
         }
 
         // Delete server by container ID
-        function attachDeleteEvent(deleteBtn, containerID)
-        {
-            deleteBtn.onclick = function ()
-            {
+        function attachDeleteEvent(deleteBtn, containerID) {
+            deleteBtn.onclick = function () {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/deleteServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response =>
-                    {
-                        if (response.ok)
-                        {
+                    .then(async response => {
+                        if (response.ok) {
                             alert('Server deleted successfully!');
-                        } else
-                        {
+                        } else {
                             text = await response.text();
                             alert(text);
                         }
@@ -487,23 +503,18 @@
         }
 
         // Restart server by container ID
-        function attachRestartEvent(restartBtn, containerID)
-        {
-            restartBtn.onclick = function ()
-            {
+        function attachRestartEvent(restartBtn, containerID) {
+            restartBtn.onclick = function () {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/restartServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response =>
-                    {
-                        if (response.ok)
-                        {
+                    .then(async response => {
+                        if (response.ok) {
                             alert('Server restarted successfully!');
-                        } else
-                        {
+                        } else {
                             text = await response.text();
                             alert(text);
                         }
@@ -513,23 +524,18 @@
         }
 
         // Start server by container ID
-        function attachStartEvent(startBtn, containerID)
-        {
-            startBtn.onclick = function ()
-            {
+        function attachStartEvent(startBtn, containerID) {
+            startBtn.onclick = function () {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/startServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response =>
-                    {
-                        if (response.ok)
-                        {
+                    .then(async response => {
+                        if (response.ok) {
                             alert('Server started successfully!');
-                        } else
-                        {
+                        } else {
                             text = await response.text();
                             alert(text);
                         }
@@ -539,23 +545,18 @@
         }
 
         // Stop server by container ID
-        function attachStopEvent(stopBtn, containerID)
-        {
-            stopBtn.onclick = function ()
-            {
+        function attachStopEvent(stopBtn, containerID) {
+            stopBtn.onclick = function () {
                 const formData = new FormData();
                 formData.append("containerID", containerID);
                 fetch(`/stopServer`, {
                     method: 'POST',
                     body: formData
                 })
-                    .then(async response =>
-                    {
-                        if (response.ok)
-                        {
+                    .then(async response => {
+                        if (response.ok) {
                             alert('Server stopped successfully!');
-                        } else
-                        {
+                        } else {
                             text = await response.text();
                             alert(text);
                         }
@@ -565,8 +566,7 @@
         }
 
         // Create new server via API call to /handleCreateNewDockerServer
-        document.getElementById("createServer").onclick = function ()
-        {
+        document.getElementById("createServer").onclick = function () {
             const serverName = document.getElementById("serverName").value;
             const dockerPassword = document.getElementById("dockerPassword").value;
             const imageName = document.getElementById("imageSelect").value;
@@ -582,15 +582,12 @@
                 method: 'POST',
                 body: formData
             })
-                .then(async response =>
-                {
-                    if (response.ok)
-                    {
+                .then(async response => {
+                    if (response.ok) {
                         alert("Server created successfully!");
                         modal.style.display = "none";
                         loadServers(); // Reload the server list
-                    } else
-                    {
+                    } else {
                         text = await response.text();
                         alert(text);
                     }

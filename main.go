@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 /*
@@ -22,6 +23,8 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
 
+var auth = Auth{}
+
 type DockerConstInfo struct {
 	ImageName string `json:"imageName"`
 	Path      string `json:"path"`
@@ -33,6 +36,14 @@ var dockerConstInfo = []DockerConstInfo{
 }
 
 func getAllServersInfo(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	dockerInfo := getAllDockerInfoJson()
 
 	//convert to json
@@ -58,8 +69,8 @@ func checkUserInput(serverName string, serverPort string, dockerPassword string,
 		return fmt.Errorf("empty fields")
 	}
 
-	if containsWhitespace(serverName) || containsWhitespace(serverPort) || containsWhitespace(dockerPassword) || containsWhitespace(dockerImageName) {
-		return fmt.Errorf("fields contain whitespace")
+	if !isValidInput(serverName) || !isValidInput(serverPort) || !isValidInput(dockerPassword) || !isValidInput(dockerImageName) {
+		return fmt.Errorf("fields contain wierd characters")
 	}
 
 	serverPortInt, err := strconv.Atoi(serverPort)
@@ -74,17 +85,58 @@ func checkUserInput(serverName string, serverPort string, dockerPassword string,
 	return nil
 }
 
-func containsWhitespace(s string) bool {
+func isValidInput(s string) bool {
 	for _, r := range s {
-		if r == ' ' {
-			return true
+		if !(r >= '!' && r <= '~') {
+			return false
 		}
 	}
-	return false
+	return true
+}
+
+func readUserCookies(r *http.Request) (string, string) {
+	username := ""
+	token := ""
+
+	cookie, err := r.Cookie("username")
+	if err == nil {
+		username = cookie.Value
+	}
+
+	cookie, err = r.Cookie("token")
+	if err == nil {
+		token = cookie.Value
+	}
+
+	return username, token
+}
+
+func redirectToLoginPage(w http.ResponseWriter) {
+	fmt.Fprint(w, `
+			<script type="text/javascript">
+				window.location.href = '/login';
+			</script>
+		`)
+}
+
+func redirectToMainPage(w http.ResponseWriter) {
+	fmt.Fprint(w, `
+			<script type="text/javascript">
+				window.location.href = '/';
+			</script>
+		`)
 }
 
 // ver racetime nas condicoes
 func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	//get the server name
 	serverName := r.FormValue("serverName")
 	dockerPassword := r.FormValue("dockerPassword")
@@ -147,10 +199,18 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func stopServer(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	containerID := r.FormValue("containerID")
 	fmt.Printf("Stopping container with ID: %s\n", containerID)
 
-	err := stopContainer(containerID)
+	err = stopContainer(containerID)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -162,10 +222,18 @@ func stopServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func startServer(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	containerID := r.FormValue("containerID")
 	fmt.Printf("Starting container with ID: %s\n", containerID)
 
-	err := startContainer(containerID)
+	err = startContainer(containerID)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -177,10 +245,18 @@ func startServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func restartServer(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	containerID := r.FormValue("containerID")
 	fmt.Printf("Restarting container with ID: %s\n", containerID)
 
-	err := restartContainer(containerID)
+	err = restartContainer(containerID)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -191,11 +267,19 @@ func restartServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteServer(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	containerID := r.FormValue("containerID")
 	fmt.Printf("Deleting container with ID: %s\n", containerID)
 
 	serverName := findServerName(containerID)
-	err := deleteHAPROXYServer(serverName)
+	err = deleteHAPROXYServer(serverName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -217,18 +301,126 @@ func deleteServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
 	http.ServeFile(w, r, "website/html.html")
 }
 
 func handlerHaProxy(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
 	http.ServeFile(w, r, "website/haproxy.html")
 }
 
 func handlerDockerController(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	http.ServeFile(w, r, "website/dockercontainers.html")
 }
 
+func loginPage(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil && err.Error() != "user not logged in" {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if loginIn {
+		w.WriteHeader(http.StatusOK)
+		redirectToMainPage(w)
+		return
+	}
+
+	http.ServeFile(w, r, "website/login.html")
+}
+
+func SetCookies(w http.ResponseWriter, username string, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "username",
+		Value:    username,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		HttpOnly: true,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		HttpOnly: true,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "login_expiration_date",
+		Value:    time.Now().Add(7 * 24 * time.Hour).Format(time.RFC3339),
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		HttpOnly: false,
+	})
+}
+
+func loginUser(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	token, err := auth.login(username, password)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	SetCookies(w, username, token)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+func refreshCookies(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	newToken, err := auth.refreshWebToken(username, token)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	SetCookies(w, username, newToken)
+
+	fmt.Println("Cookies refreshed for user: " + username)
+}
+
 func getImageNames(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	//convert to json
 	json, err := json.Marshal(dockerConstInfo)
 	if err != nil {
@@ -240,11 +432,20 @@ func getImageNames(w http.ResponseWriter, r *http.Request) {
 }
 
 func getDockerPort(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(HAPROXYPORT))
 }
 
 func runWebsite() {
+	//docker haproxy
 	http.HandleFunc("/getDockerPort", getDockerPort)
 	http.HandleFunc("/getImageNames", getImageNames)
 	http.HandleFunc("/handleCreateNewDockerServer", handleCreateNewDockerServer)
@@ -254,9 +455,15 @@ func runWebsite() {
 	http.HandleFunc("/restartServer", restartServer)
 	http.HandleFunc("/deleteServer", deleteServer)
 
+	//website
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/haproxy-controller", handlerHaProxy)
 	http.HandleFunc("/docker-containers", handlerDockerController)
+	http.HandleFunc("/login", loginPage)
+
+	//auth
+	http.HandleFunc("/loginUser", loginUser)
+	http.HandleFunc("/refreshCookie", refreshCookies)
 
 	fmt.Println("Running website on port", WEBSVPORT)
 	log.Fatal(http.ListenAndServe(WEBSVPORT, nil))
@@ -277,6 +484,8 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	auth.init()
 
 	runWebsite()
 
