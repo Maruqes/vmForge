@@ -39,6 +39,7 @@
             width: 100%;
             padding: 10px;
             margin: 10px 0;
+            box-sizing: border-box;
             border: none;
             border-radius: 4px;
             background-color: #3e4b6b;
@@ -96,7 +97,8 @@
         }
     </style>
     <script>
-        function loginUser() {
+        function loginUser()
+        {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             formData = new FormData();
@@ -105,10 +107,13 @@
             fetch('/loginUser', {
                 method: 'POST',
                 body: formData
-            }).then(response => {
-                if (response.ok) {
+            }).then(response =>
+            {
+                if (response.ok)
+                {
                     window.location.href = '/';
-                } else {
+                } else
+                {
                     document.querySelector('.error').innerText = 'Invalid username or password';
                 }
             });

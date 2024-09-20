@@ -140,6 +140,17 @@ func checkUserData(username string, password string) error {
 	return nil
 }
 
+// todo: detect used username
+func doesUserExist(username string) (bool, error) {
+	var storedUsername string
+	err := db.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&storedUsername)
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (auth *Auth) register(username string, password string) error {
 	if username == "" || password == "" {
 		return fmt.Errorf("empty fields")
@@ -148,6 +159,15 @@ func (auth *Auth) register(username string, password string) error {
 	err := checkUserData(username, password)
 	if err != nil {
 		return err
+	}
+
+	userExist, err := doesUserExist(username)
+	if err != nil {
+		return err
+	}
+
+	if userExist {
+		return fmt.Errorf("user already exists")
 	}
 
 	hashedPassword, err := hashPassword(password)
