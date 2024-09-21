@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/exp/rand"
 )
 
@@ -116,6 +117,7 @@ func runDockerImage(imageName string, dockerName string, port string) error {
 	res, err := RunCommandWithReturn(command)
 	if err != nil {
 		fmt.Println("err2: ", err)
+		return err
 	}
 
 	fmt.Println(res)
@@ -286,4 +288,107 @@ func checkIfDockerImageIsBuilt(name string, dockerFile string) bool {
 
 	return built2
 
+}
+
+func getDockerImagesJson() []string {
+	command := "docker images --format '{{json .}}'"
+	ret, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return ret
+}
+
+func createDockerImage(imageName string, commands []string) error {
+	startMainCommands := `
+FROM ubuntu:20.04
+RUN apt-get update && \
+	apt-get install -y openssh-server sshfs curl && \
+	apt-get clean
+RUN mkdir /var/run/sshd
+RUN echo 'root:passwordToChange' | chpasswd
+RUN echo "Port 22" >> /etc/ssh/sshd_config && \
+	echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+	echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+`
+	finalCommands := `
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]
+`
+
+	for i := 0; i < len(commands); i++ {
+		startMainCommands += "RUN " + commands[i]
+		if i != len(commands)-1 {
+			startMainCommands += "\n"
+		}
+	}
+
+	finalCommands = startMainCommands + finalCommands
+
+	runCommand := fmt.Sprintf("docker build -t %s - <<EOF%sEOF", imageName, finalCommands)
+
+	ret, err := RunCommandWithReturn(runCommand)
+	if err != nil && !strings.Contains(err.Error(), "DONE") {
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Println(ret)
+
+	_, err = db.Exec("INSERT INTO docker_images (name, commands) VALUES (?, ?)", imageName, strings.Join(commands, ","))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func dockerInit() {
+	//check if docker is installed
+	_, err := RunCommandWithReturn("docker --version")
+	if err != nil {
+		fmt.Println("Docker is not installed")
+		return
+	}
+
+	//check if docker is running
+	_, err = RunCommandWithReturn("docker ps")
+	if err != nil {
+		fmt.Println("Docker is not running")
+		return
+	}
+
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS docker_images (id INTEGER PRIMARY KEY, name TEXT, commands TEXT)")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("Docker init")
+}
+
+func getDockerImagesNames() []string {
+	rows, err := db.Query("SELECT * FROM docker_images")
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var ret []string
+	for rows.Next() {
+		var id int
+		var name string
+		var commands string
+		err = rows.Scan(&id, &name, &commands)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+
+		//return json format with imageName and path, the path should be null
+		ret = append(ret, name)
+	}
+
+	return ret
 }

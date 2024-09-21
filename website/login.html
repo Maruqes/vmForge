@@ -5,115 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Page</title>
-    <style>
-        body {
-            background-color: #222;
-            /* Dark background */
-            color: #fff;
-            /* Light text */
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .login-container {
-            background-color: #2e3b55;
-            /* Blue container */
-            padding: 30px;
-            border-radius: 8px;
-            width: 300px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            box-sizing: border-box;
-            border: none;
-            border-radius: 4px;
-            background-color: #3e4b6b;
-            /* Slightly lighter blue input fields */
-            color: #fff;
-            font-size: 14px;
-        }
-
-        input[type="button"] {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #28a745;
-            /* Green submit button */
-            border: none;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        input[type="submit"]:hover {
-            background-color: #218838;
-            /* Darker green on hover */
-        }
-
-        .error {
-            color: #dc3545;
-            /* Red error message */
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .button-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .button-container a {
-            color: #007bff;
-            /* Blue link */
-            text-decoration: none;
-        }
-
-        .button-container a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 400px) {
-            .login-container {
-                width: 100%;
-                padding: 20px;
-            }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script>
-        function loginUser()
-        {
+        function loginUser() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            formData = new FormData();
+            const formData = new FormData();
             formData.append('username', username);
             formData.append('password', password);
             fetch('/loginUser', {
                 method: 'POST',
                 body: formData
-            }).then(response =>
-            {
-                if (response.ok)
-                {
+            }).then(response => {
+                if (response.ok) {
                     window.location.href = '/';
-                } else
-                {
+                } else {
                     document.querySelector('.error').innerText = 'Invalid username or password';
                 }
             });
@@ -121,19 +27,22 @@
     </script>
 </head>
 
-<body>
+<body class="bg-gray-900 text-white flex justify-center items-center h-screen">
 
-    <div class="login-container">
-        <h1>Login</h1>
-        <input type="text" id="username" placeholder="Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <input type="button" value="Login" onclick="loginUser()">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+        <h1 class="text-center text-2xl mb-4">Login</h1>
+        <input type="text" id="username" placeholder="Username" required
+            class="w-full p-2 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
+        <input type="password" id="password" placeholder="Password" required
+            class="w-full p-2 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
+        <button class="w-full p-2 mt-2 bg-green-500 hover:bg-green-600 rounded text-white"
+            onclick="loginUser()">Login</button>
 
-        <div class="button-container">
-            <a href="#">Forgot Password?</a>
+        <div class="text-center mt-4">
+            <a href="#" class="text-blue-400 hover:underline">Forgot Password?</a>
         </div>
 
-        <div class="error">
+        <div class="error text-red-500 text-center mt-2">
             <!-- Error messages go here -->
         </div>
     </div>

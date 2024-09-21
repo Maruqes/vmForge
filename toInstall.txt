@@ -7,3 +7,4 @@ apt install sqlite-utils
 todo :
 // ver racetime nas condicoes
 // testar auth
+// a cena do include("vm_forge")

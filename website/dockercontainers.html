@@ -4,91 +4,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Management</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1e1e1e;
-            color: #ecf0f1;
-            margin: 0;
-            padding: 0;
-            display: flex;
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            width: 250px;
-            background-color: #2c3e50;
-            padding: 20px;
-            position: fixed;
-            height: 100%;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar h2 {
-            color: #ecf0f1;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .sidebar ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        .sidebar ul li {
-            margin: 20px 0;
-        }
-
-        .sidebar ul li a {
-            color: #ecf0f1;
-            text-decoration: none;
-            font-size: 18px;
-            display: block;
-            padding: 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar ul li a:hover {
-            background-color: #34495e;
-        }
-
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-            flex: 1;
-            background-color: #1e1e1e;
-        }
-
-
-        ul li {
-            padding: 10px;
-            background-color: #34495e;
-            border: 1px solid #2c3e50;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #ecf0f1;
-        }
-    </style>
+    <title>image Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
+<body class="bg-gray-900 text-gray-200">
 
-    <div class="sidebar">
-        <h2>Menu</h2>
-        <ul>
-            <li><a href="/">Main Page</a></li>
-            <li><a href="/docker-containers">Docker Images/Containers</a></li>
-            <li><a href="/haproxy-controller">HAProxy Controller</a></li>
+    <div class="sidebar bg-gray-800 h-screen w-64 fixed p-5">
+        <h2 class="text-center text-xl font-semibold mb-8">Menu</h2>
+        <ul class="space-y-6">
+            <li><a href="/" class="block p-2 hover:bg-gray-700 rounded">Main Page</a></li>
+            <li><a href="/docker-containers" class="block p-2 hover:bg-gray-700 rounded">Docker Images/Containers</a>
+            </li>
+            <li><a href="/haproxy-controller" class="block p-2 hover:bg-gray-700 rounded">HAProxy Controller</a></li>
         </ul>
     </div>
 
+    <div class="content ml-64 p-8">
+        <div class="container bg-gray-800 p-8 shadow-lg rounded-lg">
+            <h1 class="text-2xl font-bold mb-4">Image Management</h1>
+            <div class="flex justify-between mb-6">
+                <button class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded create">Create a
+                    Image</button>
+            </div>
+            <h2 class="text-xl font-semibold mb-4">List of Images</h2>
+            <ul id="imageList" class="space-y-4">
+                <!-- image list will be populated dynamically -->
+            </ul>
+        </div>
+    </div>
 
+    <!-- Modal -->
+    <div id="createimageModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <h2 class="text-2xl text-white mb-4">Create Image</h2>
+
+            <!-- Image Name Input -->
+            <div class="mb-4">
+                <label for="imageName" class="text-gray-400">Image Name</label>
+                <input type="text" id="imageName" placeholder="Enter image name"
+                    class="w-full p-2 mt-2 rounded bg-gray-700 text-white">
+            </div>
+
+            <!-- String Input -->
+            <div class="mb-4">
+                <label for="stringInput" class="text-gray-400">Enter String</label>
+                <input type="text" id="stringInput" placeholder="Enter a string"
+                    class="w-full p-2 mt-2 rounded bg-gray-700 text-white" onkeydown="handleKeyDown(event)">
+            </div>
+
+            <!-- Add Button -->
+            <button class="w-full p-2 bg-green-500 hover:bg-green-600 rounded text-white mb-4"
+                onclick="addString()">Add</button>
+
+            <!-- Display Array -->
+            <div id="stringList" class="bg-gray-900 p-2 rounded">
+                <p class="text-gray-400">Strings:</p>
+                <ul class="list-disc list-inside text-white" id="arrayDisplay">
+                    <!-- Added strings will appear here -->
+                </ul>
+            </div>
+
+            <!-- Create Button -->
+            <div class="flex justify-start space-x-4">
+                <button class="w-full p-2 mt-4 bg-blue-500 hover:bg-blue-600 rounded text-white"
+                    onclick="createImage()">Create</button>
+                <button class="w-full close-btn bg-red-600 hover:bg-red-700 text-white p-2 mt-4 rounded">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+
+        let stringArray = [];
+
+        function addString() {
+            const stringInput = document.getElementById('stringInput');
+            const stringValue = stringInput.value.trim();
+
+            if (stringValue !== '') {
+                stringArray.push(stringValue);
+                stringInput.value = '';  // Clear the input field
+                displayArray();
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter') {
+                addString();
+            }
+        }
+
+        function displayArray() {
+            const arrayDisplay = document.getElementById('arrayDisplay');
+            arrayDisplay.innerHTML = '';  // Clear existing list
+
+            stringArray.forEach(str => {
+                const listItem = document.createElement('li');
+                listItem.textContent = str;
+                arrayDisplay.appendChild(listItem);
+            });
+        }
+
+        function createImage() {
+            const imageName = document.getElementById('imageName').value.trim();
+
+            if (imageName) {
+                const formData = new FormData();
+                formData.append("imageName", imageName);
+                formData.append("commands", JSON.stringify(stringArray));
+                fetch(`/createDockerImage`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Image created successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error creating Image:', error));
+                // Implement your "Create" functionality here
+            } else {
+                alert('Please provide an image name.');
+            }
+        }
+
+
+        //check expiration date of tokens
+        function getCookie(name) {
+            let cookieArr = document.cookie.split(";");
+            for (let i = 0; i < cookieArr.length; i++) {
+                let cookiePair = cookieArr[i].split("=");
+                if (name == cookiePair[0].trim()) {
+                    return decodeURIComponent(cookiePair[1]);
+                }
+            }
+            return null;
+        }
+
+        const exp_date = getCookie("login_expiration_date");
+        if (exp_date) {
+            const date = new Date();
+            const expDateObj = new Date(exp_date);
+            const timeDifference = expDateObj - date;
+
+            if (timeDifference > 0) {
+                const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+                console.log(`Token expires in ${days} days, ${hours} hours, ${minutes} minutes, and ${seconds} seconds.`);
+
+                if (days < 5) {
+                    window.location.href = '/refreshCookie';
+                }
+            } else {
+                console.log("Token has already expired.");
+            }
+        } else {
+            console.log("Token not found");
+        }
+
+
+        const imageSelect = document.getElementById('imageSelect');
+
+        // Function to fetch image names from /getImageNames and populate the dropdown
+        function fetchImageNames() {
+            if (imageSelect == null) return;
+            fetch('/getDockerImages')
+                .then(response => response.json())  // Parse the JSON response
+                .then(data => {
+                    imageSelect.innerHTML = '';
+
+                    // Populate the dropdown with imageName values
+                    data.forEach(item => {
+                        const newOption = document.createElement('option');
+                        newOption.value = item.imageName;  // Set value to imageName
+                        newOption.textContent = item.imageName;  // Set visible text to imageName
+                        imageSelect.appendChild(newOption);  // Append to dropdown
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching image names:', error);  // Log errors if any
+                });
+        }
+        fetchImageNames();
+
+        setInterval(function () {
+            loadimages();
+        }, 5000);
+
+
+        // Get modal element
+        var modal = document.getElementById("createimageModal");
+
+        // Get the button that opens the modal
+        var btnCreate = document.querySelector(".create");
+
+        // Get the close button
+        var closeBtn = document.querySelector(".close-btn");
+
+        // When the user clicks the "Create a image" button, open the modal
+        btnCreate.onclick = function () {
+            modal.style.display = "flex";
+        }
+
+        // When the user clicks the "Cancel" button, close the modal
+        closeBtn.onclick = function () {
+            modal.style.display = "none";
+        }
+
+
+        function loadimages() {
+            fetch('/getDockerImages')
+                .then(response => response.json())
+                .then(data => {
+                    const imageList = document.getElementById('imageList');
+                    imageList.innerHTML = ''; // Clear current list
+                    data.forEach(image => {
+                        const li = document.createElement('li');
+                        image = JSON.parse(image)
+                        if (!image.Repository.includes("vm_forge")) {
+                            return;
+                        }
+                        li.innerHTML = `
+                          <div class="p-4 bg-gray-800 text-white rounded-lg shadow-md mb-4 flex justify-between">
+                            <div class="mr-4">
+                                <div class="mb-2">
+                                    <strong class="text-lg">Repository:</strong> <span class="font-bold"> ${image.Repository}</span> <br>
+                                    <strong>Containers:</strong> ${image.Containers} <br>
+                                    <strong>Created at:</strong> ${image.CreatedAt} <br>
+                                    <strong>Created Since:</strong> ${image.CreatedSince} <br>
+                                    <strong>Digest:</strong> ${image.Digest} <br>
+                                    <strong>ID:</strong> ${image.ID} <br>
+                                    <strong>Shared Size:</strong> ${image.SharedSize} <br>
+                                    <strong>Tag:</strong> ${image.Tag} <br>
+                                    <strong>Unique Size:</strong> ${image.UniqueSize} <br>
+                                    <strong>Virtual Size:</strong> ${image.VirtualSize} <br>
+                                </div>
+                            </div>
+                            <div class="flex flex-col space-y-2 justify-center">
+                                <button class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded focus:outline-none delete">Delete</button>
+                            </div>
+                        </div>
+                        `;
+                        imageList.appendChild(li);
+
+                        // Attach delete, restart, start, and stop functionality
+                        attachDeleteEvent(li.querySelector('.delete'), image.ID);
+                    });
+                })
+                .catch(error => console.error('Error fetching image data:', error));
+        }
+
+        // Delete server by container ID
+        function attachDeleteEvent(deleteBtn, containerID) {
+            //todo update this to images
+            deleteBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/deleteServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server deleted successfully!');
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error deleting server:', error));
+            };
+        }
+
+        window.onload = loadimages;
+    </script>
 </body>
 
 </html>

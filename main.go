@@ -142,9 +142,19 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	serverExample := r.FormValue("serverExample")
 
 	dockerImage := "null"
+	//check from static images
 	for i := 0; i < len(dockerConstInfo); i++ {
 		if dockerConstInfo[i].ImageName == serverExample {
 			dockerImage = dockerConstInfo[i].ImageName
+			break
+		}
+	}
+
+	//check from db images
+	sqlImagesNames := getDockerImagesNames()
+	for i := 0; i < len(sqlImagesNames); i++ {
+		if sqlImagesNames[i] == serverExample {
+			dockerImage = serverExample
 			break
 		}
 	}
@@ -422,14 +432,29 @@ func getImageNames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dockerConstInfoCopy := dockerConstInfo
+
 	//convert to json
-	json, err := json.Marshal(dockerConstInfo)
+	jsonret, err := json.Marshal(dockerConstInfoCopy)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	dbImages := getDockerImagesNames()
+	dockerInfoSql := DockerConstInfo{}
+	for i := 0; i < len(dbImages); i++ {
+		dockerInfoSql.ImageName = dbImages[i]
+		dockerInfoSql.Path = "null"
+		dockerConstInfoCopy = append(dockerConstInfoCopy, dockerInfoSql)
+	}
+
+	jsonret, err = json.Marshal(dockerConstInfoCopy)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(jsonret)
 }
 
 func getDockerPort(w http.ResponseWriter, r *http.Request) {
@@ -445,6 +470,69 @@ func getDockerPort(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(HAPROXYPORT))
 }
 
+func css(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "website/css.css")
+}
+
+func getDockerImages(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	images := getDockerImagesJson()
+
+	//convert to json
+	json, err := json.Marshal(images)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+func createDockerImageRequest(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	imageName := r.FormValue("imageName")
+	commands := r.FormValue("commands")
+
+	if imageName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("imageName is empty"))
+		return
+	}
+	imageName = "vm_forge_" + imageName
+
+	commandsJson := []string{}
+	err = json.Unmarshal([]byte(commands), &commandsJson)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("commands are not in the correct format"))
+		return
+	}
+
+	err = createDockerImage(imageName, commandsJson)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func runWebsite() {
 	//docker haproxy
 	http.HandleFunc("/getDockerPort", getDockerPort)
@@ -456,11 +544,16 @@ func runWebsite() {
 	http.HandleFunc("/restartServer", restartServer)
 	http.HandleFunc("/deleteServer", deleteServer)
 
+	//docker images
+	http.HandleFunc("/getDockerImages", getDockerImages)
+	http.HandleFunc("/createDockerImage", createDockerImageRequest)
+
 	//website
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/haproxy-controller", handlerHaProxy)
 	http.HandleFunc("/docker-containers", handlerDockerController)
 	http.HandleFunc("/login", loginPage)
+	http.HandleFunc("/css", css)
 
 	//auth
 	http.HandleFunc("/loginUser", loginUser)
@@ -471,6 +564,8 @@ func runWebsite() {
 }
 
 func main() {
+	auth.init()
+	dockerInit()
 
 	for i := 0; i < len(dockerConstInfo); i++ {
 		built0 := checkIfDockerImageIsBuilt(dockerConstInfo[i].ImageName, dockerConstInfo[i].Path)
@@ -485,8 +580,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
-	auth.init()
 
 	runWebsite()
 
