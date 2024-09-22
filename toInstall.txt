@@ -8,3 +8,4 @@ todo :
 // ver racetime nas condicoes
 // testar auth
 // a cena do include("vm_forge")
+// testart create images etc

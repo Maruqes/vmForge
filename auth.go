@@ -229,3 +229,38 @@ func (auth *Auth) printAllLoggedUsers() {
 		fmt.Println(user.username)
 	}
 }
+func (auth *Auth) getAdminsArrName() []string {
+	rows, err := db.Query("SELECT username FROM users")
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var ret []string
+	for rows.Next() {
+		var username string
+		err = rows.Scan(&username)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+
+		ret = append(ret, username)
+	}
+
+	return ret
+}
+
+func removeLoggedInUser(username string) {
+	delete(usersLoggedIn, username)
+}
+
+func (auth *Auth) removeUser(username string) error {
+	_, err := db.Exec("DELETE FROM users WHERE username = ?", username)
+	if err != nil {
+		return err
+	}
+
+	removeLoggedInUser(username)
+	return nil
+}

@@ -392,3 +392,25 @@ func getDockerImagesNames() []string {
 
 	return ret
 }
+
+func removeDockerImageCommand(name string) error {
+	command := fmt.Sprintf("docker rmi %s", name)
+	fmt.Println(command)
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(res)
+	return nil
+}
+
+
+func removeDockerImageSQL(name string) error {
+	_, err := db.Exec("DELETE FROM docker_images WHERE name = ?", name)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+}

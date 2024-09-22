@@ -320,7 +320,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "website/html.html")
 }
 
-func handlerHaProxy(w http.ResponseWriter, r *http.Request) {
+func admin_page(w http.ResponseWriter, r *http.Request) {
 	username, token := readUserCookies(r)
 	loginIn, err := auth.loginWithWebToken(username, token)
 	if err != nil || !loginIn {
@@ -328,7 +328,7 @@ func handlerHaProxy(w http.ResponseWriter, r *http.Request) {
 		redirectToLoginPage(w)
 		return
 	}
-	http.ServeFile(w, r, "website/haproxy.html")
+	http.ServeFile(w, r, "website/admin_page.html")
 }
 
 func handlerDockerController(w http.ResponseWriter, r *http.Request) {
@@ -533,6 +533,135 @@ func createDockerImageRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func removeDockerImage(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	imageID := r.FormValue("imageID")
+	if imageID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("imageID is empty"))
+		return
+	}
+
+	imageName := r.FormValue("imageName")
+	if imageName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("imageName is empty"))
+		return
+	}
+
+	err = removeDockerImageSQL(imageName)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = removeDockerImageCommand(imageID)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func getAdmins(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	admins := auth.getAdminsArrName()
+
+	//convert to json
+	json, err := json.Marshal(admins)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+func removeAdmin(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	adminName := r.FormValue("adminName")
+	if adminName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("adminName is empty"))
+		return
+	}
+	if adminName == username {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("You can't remove yourself"))
+		return
+	}
+
+	err = auth.removeUser(adminName)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func createAdmin(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+
+	adminName := r.FormValue("adminName")
+	if adminName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("adminName is empty"))
+		return
+	}
+
+	adminPassword := r.FormValue("adminPassword")
+	if adminPassword == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("adminPassword is empty"))
+		return
+	}
+
+	err = auth.register(adminName, adminPassword)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func runWebsite() {
 	//docker haproxy
 	http.HandleFunc("/getDockerPort", getDockerPort)
@@ -547,10 +676,16 @@ func runWebsite() {
 	//docker images
 	http.HandleFunc("/getDockerImages", getDockerImages)
 	http.HandleFunc("/createDockerImage", createDockerImageRequest)
+	http.HandleFunc("/removeDockerImage", removeDockerImage)
+
+	//admins
+	http.HandleFunc("/getAdmins", getAdmins)
+	http.HandleFunc("/removeAdmin", removeAdmin)
+	http.HandleFunc("/createAdmin", createAdmin)
 
 	//website
 	http.HandleFunc("/", handler)
-	http.HandleFunc("/haproxy-controller", handlerHaProxy)
+	http.HandleFunc("/admin_page", admin_page)
 	http.HandleFunc("/docker-containers", handlerDockerController)
 	http.HandleFunc("/login", loginPage)
 	http.HandleFunc("/css", css)

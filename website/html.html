@@ -16,7 +16,7 @@
             <li><a href="/" class="block p-2 hover:bg-gray-700 rounded">Main Page</a></li>
             <li><a href="/docker-containers" class="block p-2 hover:bg-gray-700 rounded">Docker Images/Containers</a>
             </li>
-            <li><a href="/haproxy-controller" class="block p-2 hover:bg-gray-700 rounded">HAProxy Controller</a></li>
+            <li><a href="/admin_page" class="block p-2 hover:bg-gray-700 rounded">Admin</a></li>
         </ul>
     </div>
 
@@ -52,6 +52,14 @@
             <div class="relative mb-4">
                 <select id="imageSelect"
                     class="w-full p-2 bg-gray-700 text-gray-200 border border-gray-600 rounded"></select>
+            </div>
+
+            <!-- Loading Spinner -->
+            <br>
+            <div id="loadingSpinner" class="hidden flex justify-center mb-4">
+                <div
+                    class="spinner-border animate-spin inline-block w-8 h-8 border-4 border-t-4 border-green-500 rounded-full">
+                </div>
             </div>
 
             <div class="flex justify-start space-x-4">
@@ -323,7 +331,12 @@
             const dockerPassword = document.getElementById("dockerPassword").value;
             const imageName = document.getElementById("imageSelect").value;
 
+            const loadingSpinner = document.getElementById('loadingSpinner');
+
+
             // Prepare data for the POST request
+            loadingSpinner.classList.remove('hidden');
+
             const formData = new FormData();
             formData.append("serverName", serverName);
             formData.append("dockerPassword", dockerPassword);
@@ -335,6 +348,8 @@
                 body: formData
             })
                 .then(async response => {
+                    loadingSpinner.classList.add('hidden');
+
                     if (response.ok) {
                         alert("Server created successfully!");
                         modal.style.display = "none";
@@ -344,7 +359,10 @@
                         alert(text);
                     }
                 })
-                .catch(error => console.error('Error creating server:', error));
+                .catch(error => {
+                    console.error('Error creating server:', error)
+                    loadingSpinner.classList.add('hidden');
+                });
         };
 
         // Load servers when the page is ready

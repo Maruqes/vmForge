@@ -16,7 +16,7 @@
             <li><a href="/" class="block p-2 hover:bg-gray-700 rounded">Main Page</a></li>
             <li><a href="/docker-containers" class="block p-2 hover:bg-gray-700 rounded">Docker Images/Containers</a>
             </li>
-            <li><a href="/haproxy-controller" class="block p-2 hover:bg-gray-700 rounded">HAProxy Controller</a></li>
+            <li><a href="/admin_page" class="block p-2 hover:bg-gray-700 rounded">Admin</a></li>
         </ul>
     </div>
 
@@ -60,9 +60,14 @@
             <!-- Display Array -->
             <div id="stringList" class="bg-gray-900 p-2 rounded">
                 <p class="text-gray-400">Strings:</p>
-                <ul class="list-disc list-inside text-white" id="arrayDisplay">
-                    <!-- Added strings will appear here -->
-                </ul>
+                <ul class="list-disc list-inside text-white" id="arrayDisplay"></ul>
+            </div>
+            <!-- Loading Spinner -->
+            <br>
+            <div id="loadingSpinner" class="hidden flex justify-center mb-4">
+                <div
+                    class="spinner-border animate-spin inline-block w-8 h-8 border-4 border-t-4 border-green-500 rounded-full">
+                </div>
             </div>
 
             <!-- Create Button -->
@@ -71,8 +76,12 @@
                     onclick="createImage()">Create</button>
                 <button class="w-full close-btn bg-red-600 hover:bg-red-700 text-white p-2 mt-4 rounded">Cancel</button>
             </div>
+
+
+
         </div>
     </div>
+
 
 
     <script>
@@ -109,29 +118,43 @@
 
         function createImage() {
             const imageName = document.getElementById('imageName').value.trim();
+            const loadingSpinner = document.getElementById('loadingSpinner');
 
             if (imageName) {
+                // Show loading spinner
+                loadingSpinner.classList.remove('hidden');
+
                 const formData = new FormData();
                 formData.append("imageName", imageName);
                 formData.append("commands", JSON.stringify(stringArray));
+
                 fetch(`/createDockerImage`, {
                     method: 'POST',
                     body: formData
                 })
                     .then(async response => {
+                        // Hide loading spinner when request completes
+                        loadingSpinner.classList.add('hidden');
+
                         if (response.ok) {
                             alert('Image created successfully!');
+                            modal.style.display = "none";
+                            fetchImageNames();
                         } else {
-                            text = await response.text();
+                            const text = await response.text();
                             alert(text);
                         }
                     })
-                    .catch(error => console.error('Error creating Image:', error));
-                // Implement your "Create" functionality here
+                    .catch(error => {
+                        // Hide loading spinner in case of error
+                        loadingSpinner.classList.add('hidden');
+                        console.error('Error creating Image:', error);
+                    });
             } else {
                 alert('Please provide an image name.');
             }
         }
+
 
 
         //check expiration date of tokens
@@ -256,25 +279,26 @@
                         imageList.appendChild(li);
 
                         // Attach delete, restart, start, and stop functionality
-                        attachDeleteEvent(li.querySelector('.delete'), image.ID);
+                        attachDeleteEvent(li.querySelector('.delete'), image.ID, image.Repository);
                     });
                 })
                 .catch(error => console.error('Error fetching image data:', error));
         }
 
         // Delete server by container ID
-        function attachDeleteEvent(deleteBtn, containerID) {
+        function attachDeleteEvent(deleteBtn, imageID, imageName) {
             //todo update this to images
             deleteBtn.onclick = function () {
                 const formData = new FormData();
-                formData.append("containerID", containerID);
-                fetch(`/deleteServer`, {
+                formData.append("imageID", imageID);
+                formData.append("imageName", imageName);
+                fetch(`/removeDockerImage`, {
                     method: 'POST',
                     body: formData
                 })
                     .then(async response => {
                         if (response.ok) {
-                            alert('Server deleted successfully!');
+                            alert('Image deleted successfully!');
                         } else {
                             text = await response.text();
                             alert(text);
