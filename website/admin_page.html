@@ -18,6 +18,10 @@
             </li>
             <li><a href="/admin_page" class="block p-2 hover:bg-gray-700 rounded">Admin</a></li>
         </ul>
+        <!-- Logout Button -->
+        <button id="logoutBtn"
+            class="mt-8 bg-red-600 hover:bg-red-700 text-white py-2 px-4 w-full rounded">Logout</button>
+
     </div>
 
     <div class="content ml-64 p-8">
@@ -65,10 +69,36 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <h2 id="modalTitle" class="text-xl font-semibold mb-4">Are you sure?</h2>
+            <p id="modalMessage" class="mb-6">Do you want to proceed?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirmAction"
+                    class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">Confirm</button>
+                <button id="cancelAction"
+                    class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         setInterval(function () {
             loadAdmins();
         }, 5000);
+
+        document.getElementById('logoutBtn').addEventListener('click', function () {
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            // Optionally clear any other cookies like the expiration date
+            document.cookie = "login_expiration_date=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            // Redirect to login page
+            window.location.href = '/login';
+        });
+
 
         // Placeholder function to create an admin
         function createAdmin() {
@@ -137,25 +167,59 @@
                 .catch(error => console.error('Error fetching image data:', error));
         }
 
+
+
+        // Reusable confirmation modal
+        var confirmationModal = document.getElementById("confirmationModal");
+        var confirmActionBtn = document.getElementById("confirmAction");
+        var cancelActionBtn = document.getElementById("cancelAction");
+        var modalTitle = document.getElementById("modalTitle");
+        var modalMessage = document.getElementById("modalMessage");
+
+        let actionToConfirm = null; // Store the function to be executed after confirmation
+
+        // Show the modal with the appropriate message
+        function showConfirmationModal(action, title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            actionToConfirm = action; // Store the function to run if confirmed
+            confirmationModal.style.display = "flex";
+        }
+
+        // Hide the modal
+        cancelActionBtn.onclick = function () {
+            confirmationModal.style.display = "none";
+        };
+
+        // Confirm the action
+        confirmActionBtn.onclick = function () {
+            if (actionToConfirm) {
+                actionToConfirm(); // Run the stored action
+            }
+            confirmationModal.style.display = "none";
+        };
+
         // Function to delete an admin by ID
         function deleteAdmin(deleteBtn, username) {
             //todo update this to images
             deleteBtn.onclick = function () {
-                const formData = new FormData();
-                formData.append("adminName", username);
-                fetch(`/removeAdmin`, {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(async response => {
-                        if (response.ok) {
-                            alert('User deleted successfully!');
-                        } else {
-                            text = await response.text();
-                            alert(text);
-                        }
+                showConfirmationModal(() => {
+                    const formData = new FormData();
+                    formData.append("adminName", username);
+                    fetch(`/removeAdmin`, {
+                        method: 'POST',
+                        body: formData
                     })
-                    .catch(error => console.error('Error deleting server:', error));
+                        .then(async response => {
+                            if (response.ok) {
+                                alert('User deleted successfully!');
+                            } else {
+                                text = await response.text();
+                                alert(text);
+                            }
+                        })
+                        .catch(error => console.error('Error deleting server:', error));
+                }, "Delete Admin", `Are you sure you want to delete the admin with username: ${username}?`);
             };
         }
 

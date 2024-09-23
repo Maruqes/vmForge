@@ -625,6 +625,7 @@ func removeAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("Admin removed: " + adminName)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -702,6 +703,18 @@ func main() {
 	auth.init()
 	dockerInit()
 
+	adminsNames := auth.getAdminsArrName()
+	if len(adminsNames) == 0 {
+		for i := 0; i < 5; i++ {
+			fmt.Println("No admins found, creating default admin\n YOU SHOULD DELETE THIS ADMIN AFTER CREATING A NEW ONE ON THE PAGE\n username: admin, password: admin")
+		}
+		err := auth.register("admin", "admin")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
 	for i := 0; i < len(dockerConstInfo); i++ {
 		built0 := checkIfDockerImageIsBuilt(dockerConstInfo[i].ImageName, dockerConstInfo[i].Path)
 		if !built0 {
@@ -717,5 +730,4 @@ func main() {
 	}
 
 	runWebsite()
-
 }
