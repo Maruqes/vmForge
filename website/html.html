@@ -10,18 +10,8 @@
 
 <body class="bg-gray-900 text-gray-200">
 
-    <!-- Mobile Navigation -->
-    <div class="bg-gray-800 p-4 flex justify-between md:hidden">
-        <h2 class="text-xl font-semibold">Menu</h2>
-        <button id="mobileMenuButton" class="text-gray-200 focus:outline-none">
-            &#9776;
-        </button>
-    </div>
-
-    <!-- Sidebar -->
-    <div
-        class="sidebar bg-gray-800 h-screen w-64 fixed p-5 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out">
-        <h2 class="text-center text-xl font-semibold mb-8 hidden md:block">Menu</h2>
+    <div class="sidebar bg-gray-800 h-screen w-64 fixed p-5">
+        <h2 class="text-center text-xl font-semibold mb-8">Menu</h2>
         <ul class="space-y-6">
             <li><a href="/" class="block p-2 hover:bg-gray-700 rounded">Main Page</a></li>
             <li><a href="/docker-containers" class="block p-2 hover:bg-gray-700 rounded">Docker Images/Containers</a>
@@ -31,10 +21,10 @@
         <!-- Logout Button -->
         <button id="logoutBtn"
             class="mt-8 bg-red-600 hover:bg-red-700 text-white py-2 px-4 w-full rounded">Logout</button>
+
     </div>
 
-    <!-- Content -->
-    <div class="content md:ml-64 p-8">
+    <div class="content ml-64 p-8">
         <div class="container bg-gray-800 p-8 shadow-lg rounded-lg">
             <h1 class="text-2xl font-bold mb-4">Server Management</h1>
             <div class="flex justify-between mb-6">
@@ -49,8 +39,7 @@
     </div>
 
     <!-- Modal -->
-    <div id="createServerModal"
-        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div id="createServerModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
         <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
             <h2 class="text-xl font-semibold mb-4">Create a New Server</h2>
             <label for="serverName" class="block mb-2">Server Name:</label>
@@ -68,8 +57,11 @@
             </div>
 
             <!-- Loading Spinner -->
+            <br>
             <div id="loadingSpinner" class="hidden flex justify-center mb-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-t-4 border-green-500"></div>
+                <div
+                    class="spinner-border animate-spin inline-block w-8 h-8 border-4 border-t-4 border-green-500 rounded-full">
+                </div>
             </div>
 
             <div class="flex justify-start space-x-4">
@@ -82,8 +74,7 @@
     </div>
 
     <!-- Confirmation Modal -->
-    <div id="confirmationModal"
-        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div id="confirmationModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
         <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
             <h2 id="modalTitle" class="text-xl font-semibold mb-4">Are you sure?</h2>
             <p id="modalMessage" class="mb-6">Do you want to proceed?</p>
@@ -97,16 +88,353 @@
     </div>
 
     <script>
-        // Mobile Menu Toggle
-        const sidebar = document.querySelector('.sidebar');
-        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        setInterval(function () {
+            loadServers();
+        }, 5000);
 
-        mobileMenuButton.addEventListener('click', () => {
-            sidebar.classList.toggle('-translate-x-full');
+        document.getElementById('logoutBtn').addEventListener('click', function () {
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            // Optionally clear any other cookies like the expiration date
+            document.cookie = "login_expiration_date=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            // Redirect to login page
+            window.location.href = '/login';
         });
 
-        // Rest of your JavaScript code...
-        // (Include your existing JavaScript functions and event listeners here)
+        //check expiration date of tokens
+        function getCookie(name) {
+            let cookieArr = document.cookie.split(";");
+            for (let i = 0; i < cookieArr.length; i++) {
+                let cookiePair = cookieArr[i].split("=");
+                if (name == cookiePair[0].trim()) {
+                    return decodeURIComponent(cookiePair[1]);
+                }
+            }
+            return null;
+        }
+
+        const exp_date = getCookie("login_expiration_date");
+        if (exp_date) {
+            const date = new Date();
+            const expDateObj = new Date(exp_date);
+            const timeDifference = expDateObj - date;
+
+            if (timeDifference > 0) {
+                const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+                console.log(`Token expires in ${days} days, ${hours} hours, ${minutes} minutes, and ${seconds} seconds.`);
+
+                if (days < 5) {
+                    window.location.href = '/refreshCookie';
+                }
+            } else {
+                console.log("Token has already expired.");
+            }
+        } else {
+            console.log("Token not found");
+        }
+
+
+        const imageSelect = document.getElementById('imageSelect');
+
+        // Function to fetch image names from /getImageNames and populate the dropdown
+        function fetchImageNames() {
+            fetch('/getImageNames')
+                .then(response => response.json())  // Parse the JSON response
+                .then(data => {
+                    imageSelect.innerHTML = '';
+
+                    // Populate the dropdown with imageName values
+                    data.forEach(item => {
+                        const newOption = document.createElement('option');
+                        newOption.value = item.imageName;  // Set value to imageName
+                        newOption.textContent = item.imageName;  // Set visible text to imageName
+                        imageSelect.appendChild(newOption);  // Append to dropdown
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching image names:', error);  // Log errors if any
+                });
+        }
+        fetchImageNames();
+
+
+
+
+        // Get modal element
+        var modal = document.getElementById("createServerModal");
+
+        // Get the button that opens the modal
+        var btnCreate = document.querySelector(".create");
+
+        // Get the close button
+        var closeBtn = document.querySelector(".close-btn");
+
+        // When the user clicks the "Create a Server" button, open the modal
+        btnCreate.onclick = function () {
+            modal.style.display = "flex";
+        }
+
+        // When the user clicks the "Cancel" button, close the modal
+        closeBtn.onclick = function () {
+            modal.style.display = "none";
+        }
+
+        dockerPort = 0;
+        currentLocation = window.location.href;
+        currentLocation = currentLocation.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        currentLocation = currentLocation.split(':')[0];
+        fetch('/getDockerPort')
+            .then(response => response.json())
+            .then(data => {
+                dockerPort = data;
+                console.log("Docker port: ", dockerPort);
+            })
+            .catch(error => console.error('Error fetching Docker port:', error));
+
+        // Call API and get the server info
+        function loadServers() {
+            fetch('/getAllServersInfo')
+                .then(response => response.json())
+                .then(data => {
+                    if (data == null) {
+                        return;
+                    }
+                    const serverList = document.getElementById('serverList');
+                    serverList.innerHTML = ''; // Clear current list
+                    data.forEach(server => {
+                        const li = document.createElement('li');
+                        server = JSON.parse(server)
+                        if (!server.Image.includes("vm_forge")) {
+                            return;
+                        }
+                        li.innerHTML = `
+                        <div class="p-4 bg-gray-800 text-white rounded-lg shadow-md mb-4 flex justify-between">
+                            <div class="mr-4">
+                                <div class="mb-2">
+                                    <strong class="text-lg">Name:</strong> <span class="font-bold"> ${server.Names}</span> <br>
+                                    <strong>Container ID:</strong> ${server.ID} <br>
+                                    <strong>Image:</strong> ${server.Image} <br>
+                                    <strong>Command:</strong> ${server.Command} <br>
+                                    <strong>Created:</strong> ${server.CreatedAt} <br>
+                                    <strong>State:</strong> ${server.State} <br>
+                                    <strong>Status:</strong> ${server.Status} <br>
+                                    <strong>Ports:</strong> ${server.Ports} <br>
+                                    <strong>Size:</strong> ${server.Size} <br><br>
+                                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-ssh">SSH</button>
+                                    <button class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-sshfs">SSHFS</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-col space-y-2 justify-center">
+                                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none start">Start</button>
+                                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none stop">Stop</button>
+                                <br>
+                                <br>
+                                <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none restart">Restart</button>
+                                <button class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded focus:outline-none delete">Delete</button>
+                            </div>
+                        </div>
+                        `;
+                        serverList.appendChild(li);
+
+                        // Attach delete, restart, start, and stop functionality
+                        attachDeleteEvent(li.querySelector('.delete'), server.ID);
+                        attachRestartEvent(li.querySelector('.restart'), server.ID);
+                        attachStartEvent(li.querySelector('.start'), server.ID);
+                        attachStopEvent(li.querySelector('.stop'), server.ID);
+
+
+                        sshString = "ssh -o ProxyCommand=\"openssl s_client -quiet -connect " + currentLocation + ":" + dockerPort + " -servername " + server.Names + "\" root@localhost"
+                        sshfsString = "mkdir -p ~/vmForge && sshfs -o ProxyCommand=\"openssl s_client -quiet -connect " + currentLocation + ":" + dockerPort + " -servername " + server.Names + "\" root@localhost:/root ~/vmForge"
+
+
+                        attachCopyEvent(li.querySelector('.copy-ssh'), sshString);
+                        attachCopyEvent(li.querySelector('.copy-sshfs'), sshfsString);
+                    });
+                })
+                .catch(error => console.error('Error fetching server data:', error));
+        }
+
+        function attachCopyEvent(copyBtn, textToCopy) {
+            copyBtn.onclick = function () {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                }).catch(err => {
+                    console.error('Error copying text: ', err);
+                });
+            };
+        }
+
+        // Reusable confirmation modal
+        var confirmationModal = document.getElementById("confirmationModal");
+        var confirmActionBtn = document.getElementById("confirmAction");
+        var cancelActionBtn = document.getElementById("cancelAction");
+        var modalTitle = document.getElementById("modalTitle");
+        var modalMessage = document.getElementById("modalMessage");
+
+        let actionToConfirm = null; // Store the function to be executed after confirmation
+
+        // Show the modal with the appropriate message
+        function showConfirmationModal(action, title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            actionToConfirm = action; // Store the function to run if confirmed
+            confirmationModal.style.display = "flex";
+        }
+
+        // Hide the modal
+        cancelActionBtn.onclick = function () {
+            confirmationModal.style.display = "none";
+        };
+
+        // Confirm the action
+        confirmActionBtn.onclick = function () {
+            if (actionToConfirm) {
+                actionToConfirm(); // Run the stored action
+            }
+            confirmationModal.style.display = "none";
+        };
+
+        // Delete server by container ID with confirmation
+        function attachDeleteEvent(deleteBtn, containerID) {
+            deleteBtn.onclick = function () {
+                showConfirmationModal(() => {
+                    const formData = new FormData();
+                    formData.append("containerID", containerID);
+                    fetch(`/deleteServer`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(async response => {
+                            if (response.ok) {
+                                alert('Server deleted successfully!');
+                                loadServers(); // Reload the server list
+                            } else {
+                                const text = await response.text();
+                                alert(text);
+                            }
+                        })
+                        .catch(error => console.error('Error deleting server:', error));
+                }, "Delete Server", "Are you sure you want to delete this server?");
+            };
+        }
+
+        // Restart server by container ID with confirmation
+        function attachRestartEvent(restartBtn, containerID) {
+            restartBtn.onclick = function () {
+                showConfirmationModal(() => {
+                    const formData = new FormData();
+                    formData.append("containerID", containerID);
+                    fetch(`/restartServer`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(async response => {
+                            if (response.ok) {
+                                alert('Server restarted successfully!');
+                                loadServers(); // Reload the server list
+                            } else {
+                                const text = await response.text();
+                                alert(text);
+                            }
+                        })
+                        .catch(error => console.error('Error restarting server:', error));
+                }, "Restart Server", "Are you sure you want to restart this server?");
+            };
+        }
+
+        // Stop server by container ID with confirmation
+        function attachStopEvent(stopBtn, containerID) {
+            stopBtn.onclick = function () {
+                showConfirmationModal(() => {
+                    const formData = new FormData();
+                    formData.append("containerID", containerID);
+                    fetch(`/stopServer`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(async response => {
+                            if (response.ok) {
+                                alert('Server stopped successfully!');
+                                loadServers();
+                            } else {
+                                const text = await response.text();
+                                alert(text);
+                            }
+                        })
+                        .catch(error => console.error('Error stopping server:', error));
+                }, "Stop Server", "Are you sure you want to stop this server?");
+            };
+        }
+
+
+        // Start server by container ID
+        function attachStartEvent(startBtn, containerID) {
+            startBtn.onclick = function () {
+                const formData = new FormData();
+                formData.append("containerID", containerID);
+                fetch(`/startServer`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            alert('Server started successfully!');
+                            loadServers();
+                        } else {
+                            text = await response.text();
+                            alert(text);
+                        }
+                    })
+                    .catch(error => console.error('Error starting server:', error));
+            };
+        }
+
+        // Create new server via API call to /handleCreateNewDockerServer
+        document.getElementById("createServer").onclick = function () {
+            const serverName = document.getElementById("serverName").value;
+            const dockerPassword = document.getElementById("dockerPassword").value;
+            const imageName = document.getElementById("imageSelect").value;
+
+            const loadingSpinner = document.getElementById('loadingSpinner');
+
+
+            // Prepare data for the POST request
+            loadingSpinner.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append("serverName", serverName);
+            formData.append("dockerPassword", dockerPassword);
+            formData.append("serverExample", imageName);
+
+            // Send POST request to /handleCreateNewDockerServer
+            fetch('/handleCreateNewDockerServer', {
+                method: 'POST',
+                body: formData
+            })
+                .then(async response => {
+                    loadingSpinner.classList.add('hidden');
+
+                    if (response.ok) {
+                        alert("Server created successfully!");
+                        modal.style.display = "none";
+                        loadServers(); // Reload the server list
+                    } else {
+                        text = await response.text();
+                        alert(text);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error creating server:', error)
+                    loadingSpinner.classList.add('hidden');
+                });
+        };
+
+        // Load servers when the page is ready
+        window.onload = loadServers;
     </script>
 </body>
 

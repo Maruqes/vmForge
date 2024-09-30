@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Page</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script>
         function loginUser() {
             const username = document.getElementById('username').value;
@@ -27,14 +27,15 @@
     </script>
 </head>
 
-<body class="bg-gray-900 text-white flex justify-center items-center min-h-screen">
-    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h1 class="text-center text-2xl mb-6">Login</h1>
+<body class="bg-gray-900 text-white flex justify-center items-center h-screen">
+
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+        <h1 class="text-center text-2xl mb-4">Login</h1>
         <input type="text" id="username" placeholder="Username" required
-            class="w-full p-3 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
+            class="w-full p-2 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
         <input type="password" id="password" placeholder="Password" required
-            class="w-full p-3 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
-        <button class="w-full p-3 mt-2 bg-green-500 hover:bg-green-600 rounded text-white font-semibold"
+            class="w-full p-2 mb-4 rounded bg-gray-700 text-white placeholder-gray-400">
+        <button class="w-full p-2 mt-2 bg-green-500 hover:bg-green-600 rounded text-white"
             onclick="loginUser()">Login</button>
 
         <div class="text-center mt-4">
@@ -45,6 +46,7 @@
             <!-- Error messages go here -->
         </div>
     </div>
+
 </body>
 
 </html>
