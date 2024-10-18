@@ -17,8 +17,16 @@ type haproxy struct {
 	serverPort string
 }
 
+// serverName, serverPort, subdomain
+type haproxyPorts struct {
+	serverName string
+	serverPort string
+	subdomain  string
+}
+
 const HAPROXY_FILE_FOLDER_NAME = "/haproxyFiles"
 const HAPROXY_SERVERS_FILE_NAME = "/serversSave.bin"
+const HAPROXY_SERVERS_PORTS_FILE_NAME = "/serversPortsSave.bin"
 
 func checkServersProxyData(servers []haproxy) error {
 	for i := 0; i < len(servers); i++ {
@@ -113,6 +121,13 @@ func checkSaveServersExistance() error {
 			return err
 		}
 	}
+
+	if _, err := os.Stat(currentDir + HAPROXY_FILE_FOLDER_NAME + HAPROXY_SERVERS_PORTS_FILE_NAME); os.IsNotExist(err) {
+		_, err := os.Create(currentDir + HAPROXY_FILE_FOLDER_NAME + HAPROXY_SERVERS_PORTS_FILE_NAME)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -178,6 +193,16 @@ func createNewHAPROXYServer(serverName string, serverInt string, serverPort stri
 	return nil
 }
 
+func get_containerIP(serverName string) string {
+	command := "docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' " + serverName
+
+	res, err := RunCommandWithReturn(command)
+	if err != nil {
+		return ""
+	}
+	return res[0]
+}
+
 func createHaProxyFiles(path string, mainPort string, servers []haproxy) error {
 	err := checkServersProxyData(servers)
 
@@ -188,6 +213,10 @@ func createHaProxyFiles(path string, mainPort string, servers []haproxy) error {
 	//open the file
 	headExampleData := "testData/sshCFG_head_Example"
 	backendExampleData := "testData/sshCFG_backend_Example"
+
+	portFrontend := "testData/PortFrontendExample"
+	portBackend := "testData/PortBackendExample"
+
 	newFile, err := os.Create(filepath.Join(path, "haproxy.cfg"))
 	if err != nil {
 		return err
@@ -199,9 +228,47 @@ func createHaProxyFiles(path string, mainPort string, servers []haproxy) error {
 
 	headFileBytes = bytes.ReplaceAll(headFileBytes, []byte("mainPort"), []byte(mainPort))
 
-	_, err = newFile.Write(append(headFileBytes, '\n', '\n'))
+	_, err = newFile.Write(append(headFileBytes, '\n'))
 	if err != nil {
 		return err
+	}
+
+	haproxyPortsExample := []haproxyPorts{{"vmForge_123", "901", "test1"}, {"vmForge_123", "902", "test2"}}
+
+	//needs serverName, serverPort, \, serverip, servermainport, backendName
+	portFrontendFileBytes := getFileBytes(portFrontend)
+	portBackendFileBytes := getFileBytes(portBackend)
+
+	for i := 0; i < len(haproxyPortsExample); i++ {
+		tempPortFrontend := make([]byte, len(portFrontendFileBytes))
+		copy(tempPortFrontend, portFrontendFileBytes)
+		tempPortFrontend = bytes.ReplaceAll(tempPortFrontend, []byte("host_serverName"), []byte(haproxyPortsExample[i].serverName+"_"+haproxyPortsExample[i].serverPort))
+		tempPortFrontend = bytes.ReplaceAll(tempPortFrontend, []byte("subdomain"), []byte(haproxyPortsExample[i].subdomain))
+		tempPortFrontend = bytes.ReplaceAll(tempPortFrontend, []byte("serverIP"), []byte(SERVER_LINK))
+		tempPortFrontend = bytes.ReplaceAll(tempPortFrontend, []byte("http_backendName"), []byte(haproxyPortsExample[i].serverName+"_"+haproxyPortsExample[i].subdomain))
+
+		_, err = newFile.Write(append(tempPortFrontend, '\n', '\n'))
+		if err != nil {
+			return err
+		}
+	}
+
+	for i := 0; i < len(haproxyPortsExample); i++ {
+		sv_ip := get_containerIP(haproxyPortsExample[i].serverName)
+		if sv_ip == "" {
+			fmt.Errorf("server not found trying to set port")
+			continue
+		}
+		tempPortBackend := make([]byte, len(portBackendFileBytes))
+		copy(tempPortBackend, portBackendFileBytes)
+		tempPortBackend = bytes.ReplaceAll(tempPortBackend, []byte("ContainerIP"), []byte(sv_ip))
+		tempPortBackend = bytes.ReplaceAll(tempPortBackend, []byte("serverContPort"), []byte(haproxyPortsExample[i].serverPort))
+		tempPortBackend = bytes.ReplaceAll(tempPortBackend, []byte("http_backendName"), []byte(haproxyPortsExample[i].serverName+"_"+haproxyPortsExample[i].subdomain))
+
+		_, err = newFile.Write(append(tempPortBackend, '\n', '\n'))
+		if err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < len(servers); i++ {
@@ -251,19 +318,19 @@ func deleteHAPROXYServer(serverName string) error {
 }
 
 func runHaProxy(mainHaProxyPort string) error {
-	// path := createFolder(HAPROXY_FILE_FOLDER_NAME)
-	// err := checkCertificate()
-	// if err != nil {
-	// 	return err
-	// }
+	path := createFolder(HAPROXY_FILE_FOLDER_NAME)
+	err := checkCertificate()
+	if err != nil {
+		return err
+	}
 
-	// servers := readServersBinary()
-	// fmt.Println("servers: ", servers)
+	servers := readServersBinary()
+	fmt.Println("servers: ", servers)
 
-	// err = createHaProxyFiles(path, mainHaProxyPort, servers)
-	// if err != nil {
-	// 	return err
-	// }
+	err = createHaProxyFiles(path, mainHaProxyPort, servers)
+	if err != nil {
+		return err
+	}
 	runHaProxuProcess()
 	return nil
 }

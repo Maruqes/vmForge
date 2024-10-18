@@ -19,7 +19,7 @@ RUN echo "Port 22" >> /etc/ssh/sshd_config && \
 
 
 # Expose port 22 for SSH
-EXPOSE 22
+EXPOSE 4545
 
 # Start the SSH service
 CMD ["/usr/sbin/sshd", "-D"]

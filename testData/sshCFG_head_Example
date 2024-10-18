@@ -6,3 +6,9 @@ frontend ssh
     #ssl_fc_sni
     tcp-request content set-var(sess.sni) ssl_fc_sni
     use_backend %[ssl_fc_sni]
+
+# ports frontend for HTTP
+frontend http
+    bind *:8081
+    mode http
+    timeout client 50000ms

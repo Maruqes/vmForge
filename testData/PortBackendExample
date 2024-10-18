@@ -1,0 +1,5 @@
+backend http_backendName
+    mode http
+    server webserver1 ContainerIP:serverContPort check
+    timeout connect 5000ms
+    timeout server 50000ms
