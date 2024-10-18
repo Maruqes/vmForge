@@ -22,6 +22,7 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
+const SERVER_LINK = "localhost"
 
 var auth = Auth{}
 
@@ -663,6 +664,45 @@ func createAdmin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func openPortRequest(w http.ResponseWriter, r *http.Request) {
+	serverName := r.FormValue("serverName")
+	if serverName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("serverName is empty"))
+		return
+	}
+
+	port := r.FormValue("port")
+	if port == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("port is empty"))
+		return
+	}
+
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("port is not a number"))
+		return
+	}
+
+	if portInt < 0 || portInt > 65535 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("port is invalid"))
+		return
+	}
+
+	err = openPort(serverName, port)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func runWebsite() {
 	//docker haproxy
 	http.HandleFunc("/getDockerPort", getDockerPort)
@@ -694,6 +734,9 @@ func runWebsite() {
 	//auth
 	http.HandleFunc("/loginUser", loginUser)
 	http.HandleFunc("/refreshCookie", refreshCookies)
+
+	//ports
+	http.HandleFunc("/portOpen", openPortRequest)
 
 	fmt.Println("Running website on port", WEBSVPORT)
 	log.Fatal(http.ListenAndServe(WEBSVPORT, nil))

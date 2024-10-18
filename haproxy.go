@@ -251,19 +251,19 @@ func deleteHAPROXYServer(serverName string) error {
 }
 
 func runHaProxy(mainHaProxyPort string) error {
-	path := createFolder(HAPROXY_FILE_FOLDER_NAME)
-	err := checkCertificate()
-	if err != nil {
-		return err
-	}
+	// path := createFolder(HAPROXY_FILE_FOLDER_NAME)
+	// err := checkCertificate()
+	// if err != nil {
+	// 	return err
+	// }
 
-	servers := readServersBinary()
-	fmt.Println("servers: ", servers)
+	// servers := readServersBinary()
+	// fmt.Println("servers: ", servers)
 
-	err = createHaProxyFiles(path, mainHaProxyPort, servers)
-	if err != nil {
-		return err
-	}
+	// err = createHaProxyFiles(path, mainHaProxyPort, servers)
+	// if err != nil {
+	// 	return err
+	// }
 	runHaProxuProcess()
 	return nil
 }
@@ -287,4 +287,8 @@ func restartHaProxy(mainHaProxyPort string) {
 		}
 		fmt.Println(res)
 	}()
+}
+
+func openPort(serverName string, serverPort string) error {
+	return nil
 }

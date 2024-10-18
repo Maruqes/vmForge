@@ -111,7 +111,7 @@ func runDockerImage(imageName string, dockerName string, port string) error {
 		return err
 	}
 
-	command := fmt.Sprintf("docker run -d -p %s:22 --name %s %s", port, dockerName, imageName)
+	command := fmt.Sprintf("docker run -d -p %s:22 -p 901:901 --name %s %s", port, dockerName, imageName)
 	fmt.Println(command)
 
 	res, err := RunCommandWithReturn(command)
@@ -404,7 +404,6 @@ func removeDockerImageCommand(name string) error {
 	fmt.Println(res)
 	return nil
 }
-
 
 func removeDockerImageSQL(name string) error {
 	_, err := db.Exec("DELETE FROM docker_images WHERE name = ?", name)
