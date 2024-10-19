@@ -111,7 +111,7 @@ func runDockerImage(imageName string, dockerName string, port string) error {
 		return err
 	}
 
-	command := fmt.Sprintf("docker run -d -p %s:22 -p 901:901 -p 902:902 --name %s %s", port, dockerName, imageName)
+	command := fmt.Sprintf("docker run -d -p %s:22 --name %s %s", port, dockerName, imageName)
 	fmt.Println(command)
 
 	res, err := RunCommandWithReturn(command)
@@ -226,6 +226,7 @@ func startContainer(containerID string) error {
 		return err
 	}
 	fmt.Println(res)
+	restartHaProxy(HAPROXYPORT)
 	return nil
 }
 
