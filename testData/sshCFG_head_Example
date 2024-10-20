@@ -9,6 +9,6 @@ frontend ssh
 
 # ports frontend for HTTP
 frontend http
-    bind *:8081
+    bind *:portForContainers
     mode http
     timeout client 50000ms

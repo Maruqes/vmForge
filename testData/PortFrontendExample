@@ -1,2 +1,2 @@
-    acl host_serverName hdr(host) -i subdomain.serverIP subdomain.serverIP:8081
+    acl host_serverName hdr(host) -i subdomain.serverIP subdomain.serverIP:portForContainers
     use_backend http_backendName if host_serverName

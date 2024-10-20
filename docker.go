@@ -17,6 +17,89 @@ import (
 
 const DOCKER_FILE_FOLDER_NAME = "/dockerFiles"
 
+func check_ports(ports []haproxyPorts) error {
+	for i := 0; i < len(ports); i++ {
+		if ports[i].ServerPort == "" {
+			return fmt.Errorf("port is empty")
+		}
+		portInt, err := strconv.Atoi(ports[i].ServerPort)
+		if err != nil {
+			return err
+		}
+		if portInt < 0 || portInt > 65535 {
+			return fmt.Errorf("port is invalid")
+		}
+		use := isPortInUse(portInt)
+		if use {
+			return fmt.Errorf("port is already in use")
+		}
+
+		if ports[i].ServerName == "" {
+			return fmt.Errorf("server name is empty")
+		}
+
+		if ports[i].Subdomain == "" {
+			return fmt.Errorf("Subdomain is empty")
+		}
+
+		for j := 0; j < len(ports); j++ {
+			if i != j && ports[i].ServerPort == ports[j].ServerPort {
+				return fmt.Errorf("port is already in use")
+			}
+
+			if i != j && ports[i].Subdomain == ports[j].Subdomain {
+				return fmt.Errorf("Subdomain is already in use")
+			}
+		}
+
+		//checking Subdomains
+		if ports[i].Subdomain[0] == '-' || ports[i].Subdomain[len(ports[i].Subdomain)-1] == '-' {
+			return fmt.Errorf("Subdomain is invalid (starts or ends with -)")
+		}
+
+		for j := 0; j < len(ports[i].Subdomain); j++ {
+			if ports[i].Subdomain[j] != '-' && !((ports[i].Subdomain[j] >= 'a' && ports[i].Subdomain[j] <= 'z') || (ports[i].Subdomain[j] >= 'A' && ports[i].Subdomain[j] <= 'Z') || (ports[i].Subdomain[j] >= '0' && ports[i].Subdomain[j] <= '9')) {
+				return fmt.Errorf("Subdomain is invalid")
+			}
+		}
+	}
+	old_ports, err := readServersPorts()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(ports); i++ {
+		for j := 0; j < len(old_ports); j++ {
+			if ports[i].ServerPort == old_ports[j].ServerPort {
+				return fmt.Errorf("port is already in use")
+			}
+
+			if ports[i].Subdomain == old_ports[j].Subdomain {
+				return fmt.Errorf("Subdomain is already in use")
+			}
+		}
+	}
+	return nil
+}
+
+func add_ServerPortBin(ports []haproxyPorts) error {
+	for i := 0; i < len(ports); i++ {
+		_, err := db.Exec("INSERT INTO containerPorts (server_name, server_port, subdomain) VALUES (?, ?, ?)", ports[i].ServerName, ports[i].ServerPort, ports[i].Subdomain)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func remove_ServerPortBin(port haproxyPorts) error {
+	_, err := db.Exec("DELETE FROM containerPorts WHERE server_name = ?", port.ServerName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func checkDockerData(port string) error {
 	if port == "" {
 		return fmt.Errorf("port is empty")
@@ -104,14 +187,19 @@ func buildDockerImage(path string, imageName string) error {
 	return fmt.Errorf("docker image %s was not found after being created", imageName)
 }
 
-func runDockerImage(imageName string, dockerName string, port string) error {
+func runDockerImage(imageName string, dockerName string, port string, open_ports []haproxyPorts) error {
 	err := checkDockerData(port)
 	if err != nil {
 		fmt.Println("err1: ", err)
 		return err
 	}
 
-	command := fmt.Sprintf("docker run -d -p %s:22 --name %s %s", port, dockerName, imageName)
+	command := fmt.Sprintf("docker run -d -p %s:22 ", port)
+	for i := 0; i < len(open_ports); i++ {
+		command += fmt.Sprintf("-p %s:%s ", open_ports[i].ServerPort, open_ports[i].ServerPort)
+	}
+	command += fmt.Sprintf("--name %s %s", dockerName, imageName)
+
 	fmt.Println(command)
 
 	res, err := RunCommandWithReturn(command)
@@ -170,7 +258,7 @@ func generatePort() (string, error) {
 	return "", errors.New("could not generate an available port after 10 attempts")
 }
 
-func runDocker(password string, dockerPort string, imageDockerName string, serverName string) error {
+func runDocker(password string, dockerPort string, imageDockerName string, ServerName string, openPorts []haproxyPorts) error {
 
 	containerExists := checkDockerImageExists(imageDockerName)
 
@@ -178,13 +266,15 @@ func runDocker(password string, dockerPort string, imageDockerName string, serve
 		return fmt.Errorf("docker image %s does not exist", imageDockerName)
 	}
 
-	err := runDockerImage(imageDockerName, serverName, dockerPort)
+	err := runDockerImage(imageDockerName, ServerName, dockerPort, openPorts)
 	if err != nil {
 		fmt.Println("runDocker: ", err)
 		return err
 	}
 
-	err = setDockerPassword(password, serverName)
+	add_ServerPortBin(openPorts)
+
+	err = setDockerPassword(password, ServerName)
 	if err != nil {
 		fmt.Println("setDockerPassword: ", err)
 		return err
@@ -347,6 +437,7 @@ CMD ["/usr/sbin/sshd", "-D"]
 }
 
 func dockerInit() {
+
 	//check if docker is installed
 	_, err := RunCommandWithReturn("docker --version")
 	if err != nil {
@@ -358,6 +449,11 @@ func dockerInit() {
 	_, err = RunCommandWithReturn("docker ps")
 	if err != nil {
 		fmt.Println("Docker is not running")
+		return
+	}
+
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS containerPorts (server_name TEXT, server_port TEXT, subdomain TEXT)")
+	if err != nil {
 		return
 	}
 

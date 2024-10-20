@@ -68,6 +68,14 @@
                     class="w-full p-2 bg-gray-700 text-gray-200 border border-gray-600 rounded"></select>
             </div>
 
+            <!-- New HAProxy Ports Section -->
+            <label class="block mb-2">HAProxy Ports:</label>
+            <div id="haproxyPortsContainer" class="space-y-4 mb-4">
+                <!-- HAProxy port inputs will be added here -->
+            </div>
+            <button id="addHaproxyPortBtn" type="button"
+                class="mb-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Add Port</button>
+
             <!-- Loading Spinner -->
             <div id="loadingSpinner" class="hidden flex justify-center mb-4">
                 <div class="animate-spin rounded-full h-8 w-8 border-t-4 border-green-500">
@@ -80,8 +88,8 @@
                 <button class="close-btn bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded">Cancel</button>
             </div>
         </div>
-
     </div>
+
 
     <!-- Confirmation Modal -->
     <div id="confirmationModal"
@@ -99,9 +107,38 @@
     </div>
 
     <script>
+        var PORT_FOR_CONTAINERS;
+        fetch('/getPortsForContainers')
+            .then(response => response.json())
+            .then(data => {
+                PORT_FOR_CONTAINERS = data;
+                console.log(PORT_FOR_CONTAINERS);
+            })
+            .catch(error => console.error('Error fetching Docker port:', error));
+
+
         setInterval(function () {
             loadServers();
         }, 5000);
+
+        let haproxyPortsData = [];
+
+        function fetchHaproxyPorts() {
+            fetch('/getPorts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data == null) {
+                        return;
+                    }
+                    haproxyPortsData = data;
+
+                })
+                .catch(error => console.error('Error fetching haproxyPorts data:', error));
+        }
+
+        // Fetch the data when the page loads
+        fetchHaproxyPorts();
+
 
         document.getElementById('logoutBtn').addEventListener('click', function () {
             document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -208,7 +245,9 @@
             .catch(error => console.error('Error fetching Docker port:', error));
 
         // Call API and get the server info
+        // Call API and get the server info
         function loadServers() {
+            fetchHaproxyPorts();
             fetch('/getAllServersInfo')
                 .then(response => response.json())
                 .then(data => {
@@ -219,37 +258,62 @@
                     serverList.innerHTML = ''; // Clear current list
                     data.forEach(server => {
                         const li = document.createElement('li');
-                        server = JSON.parse(server)
+                        server = JSON.parse(server);
                         if (!server.Image.includes("vm_forge")) {
                             return;
                         }
+
+                        // Find matching haproxyPorts entries for this server
+                        const matchingPorts = haproxyPortsData.filter(
+                            portEntry => portEntry.serverName === server.Names
+                        );
+
+                        // Construct URLs using the subdomains and include the serverPort
+                        let subdomainURLs = '';
+                        if (matchingPorts.length > 0) {
+                            matchingPorts.forEach(portEntry => {
+                                const currentLocation2 = window.location.hostname;
+                                const url = `http://${portEntry.subdomain}.${currentLocation2}:${PORT_FOR_CONTAINERS}`;
+                                subdomainURLs += `
+                            <div>
+                                <a href="${url}" target="_blank" class="text-blue-400 hover:underline">${url}</a>
+                                (Port: ${portEntry.serverPort})
+                            </div>`;
+                            });
+                        } else {
+                            subdomainURLs = 'No ports open';
+                        }
+
                         li.innerHTML = `
-                        <div class="p-4 bg-gray-800 text-white rounded-lg shadow-md mb-4 flex justify-between">
-                            <div class="mr-4">
-                                <div class="mb-2">
-                                    <strong class="text-lg">Name:</strong> <span class="font-bold"> ${server.Names}</span> <br>
-                                    <strong>Container ID:</strong> ${server.ID} <br>
-                                    <strong>Image:</strong> ${server.Image} <br>
-                                    <strong>Command:</strong> ${server.Command} <br>
-                                    <strong>Created:</strong> ${server.CreatedAt} <br>
-                                    <strong>State:</strong> ${server.State} <br>
-                                    <strong>Status:</strong> ${server.Status} <br>
-                                    <strong>Ports:</strong> ${server.Ports} <br>
-                                    <strong>Size:</strong> ${server.Size} <br><br>
-                                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-ssh">SSH</button>
-                                    <button class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-sshfs">SSHFS</button>
-                                </div>
-                            </div>
-                            <div class="flex flex-col space-y-2 justify-center">
-                                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none start">Start</button>
-                                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none stop">Stop</button>
-                                <br>
-                                <br>
-                                <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none restart">Restart</button>
-                                <button class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded focus:outline-none delete">Delete</button>
-                            </div>
+                <div class="p-4 bg-gray-800 text-white rounded-lg shadow-md mb-4 flex justify-between">
+                    <div class="mr-4">
+                        <div class="mb-2">
+                            <strong class="text-lg">Name:</strong> <span class="font-bold">${server.Names}</span> <br>
+                            <strong>Container ID:</strong> ${server.ID} <br>
+                            <strong>Image:</strong> ${server.Image} <br>
+                            <strong>Command:</strong> ${server.Command} <br>
+                            <strong>Created:</strong> ${server.CreatedAt} <br>
+                            <strong>State:</strong> ${server.State} <br>
+                            <strong>Status:</strong> ${server.Status} <br>
+                            <strong>Ports:</strong> ${server.Ports} <br>
+                            <strong>Size:</strong> ${server.Size} <br><br>
+                            <strong>Subdomains:</strong><br>
+                            ${subdomainURLs}
+                            <br>
+                            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-ssh">SSH</button>
+                            <button class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded focus:outline-none copy-sshfs">SSHFS</button>
                         </div>
-                        `;
+                    </div>
+                    <div class="flex flex-col space-y-2 justify-center">
+                        <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none start">Start</button>
+                        <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none stop">Stop</button>
+                        <br>
+                        <br>
+                        <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none restart">Restart</button>
+                        <button class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded focus:outline-none delete">Delete</button>
+                    </div>
+                </div>
+                `;
                         serverList.appendChild(li);
 
                         // Attach delete, restart, start, and stop functionality
@@ -258,10 +322,8 @@
                         attachStartEvent(li.querySelector('.start'), server.ID);
                         attachStopEvent(li.querySelector('.stop'), server.ID);
 
-
-                        sshString = "ssh -o ProxyCommand=\"openssl s_client -quiet -connect " + currentLocation + ":" + dockerPort + " -servername " + server.Names + "\" root@localhost"
-                        sshfsString = "mkdir -p ~/vmForge && sshfs -o ProxyCommand=\"openssl s_client -quiet -connect " + currentLocation + ":" + dockerPort + " -servername " + server.Names + "\" root@localhost:/root ~/vmForge"
-
+                        const sshString = `ssh -o ProxyCommand="openssl s_client -quiet -connect ${currentLocation}:${dockerPort} -servername ${server.Names}" root@localhost`;
+                        const sshfsString = `mkdir -p ~/vmForge && sshfs -o ProxyCommand="openssl s_client -quiet -connect ${currentLocation}:${dockerPort} -servername ${server.Names}" root@localhost:/root ~/vmForge`;
 
                         attachCopyEvent(li.querySelector('.copy-ssh'), sshString);
                         attachCopyEvent(li.querySelector('.copy-sshfs'), sshfsString);
@@ -269,6 +331,7 @@
                 })
                 .catch(error => console.error('Error fetching server data:', error));
         }
+
 
         function attachCopyEvent(copyBtn, textToCopy) {
             copyBtn.onclick = function () {
@@ -404,6 +467,39 @@
             };
         }
 
+        document.getElementById('addHaproxyPortBtn').addEventListener('click', function () {
+            const container = document.getElementById('haproxyPortsContainer');
+
+            const portSubdomainDiv = document.createElement('div');
+            portSubdomainDiv.className = 'flex space-x-2 items-center';
+
+            const portInput = document.createElement('input');
+            portInput.type = 'text';
+            portInput.placeholder = 'Port';
+            portInput.className = 'w-1/2 p-2 bg-gray-700 text-gray-200 border border-gray-600 rounded';
+            portInput.name = 'haproxyPort';
+
+            const subdomainInput = document.createElement('input');
+            subdomainInput.type = 'text';
+            subdomainInput.placeholder = 'Subdomain';
+            subdomainInput.className = 'w-1/2 p-2 bg-gray-700 text-gray-200 border border-gray-600 rounded';
+            subdomainInput.name = 'haproxySubdomain';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'text-red-500 hover:text-red-700 focus:outline-none';
+            removeBtn.innerText = 'Remove';
+            removeBtn.addEventListener('click', function () {
+                container.removeChild(portSubdomainDiv);
+            });
+
+            portSubdomainDiv.appendChild(portInput);
+            portSubdomainDiv.appendChild(subdomainInput);
+            portSubdomainDiv.appendChild(removeBtn);
+
+            container.appendChild(portSubdomainDiv);
+        });
+
         // Create new server via API call to /handleCreateNewDockerServer
         document.getElementById("createServer").onclick = function () {
             const serverName = document.getElementById("serverName").value;
@@ -412,14 +508,32 @@
 
             const loadingSpinner = document.getElementById('loadingSpinner');
 
-
-            // Prepare data for the POST request
             loadingSpinner.classList.remove('hidden');
 
             const formData = new FormData();
             formData.append("serverName", serverName);
             formData.append("dockerPassword", dockerPassword);
             formData.append("serverExample", imageName);
+
+            // Collect haproxyPorts inputs
+            const haproxyPortsContainer = document.getElementById('haproxyPortsContainer');
+            const haproxyPorts = [];
+
+            const portSubdomainDivs = haproxyPortsContainer.querySelectorAll('div');
+            portSubdomainDivs.forEach(div => {
+                const portInput = div.querySelector('input[name="haproxyPort"]');
+                const subdomainInput = div.querySelector('input[name="haproxySubdomain"]');
+                if (portInput && subdomainInput) {
+                    const port = portInput.value;
+                    const subdomain = subdomainInput.value;
+                    if (port && subdomain) {
+                        haproxyPorts.push({ port: port, subdomain: subdomain });
+                    }
+                }
+            });
+
+            // Add haproxyPorts to formData
+            formData.append("haproxyPorts", JSON.stringify(haproxyPorts));
 
             // Send POST request to /handleCreateNewDockerServer
             fetch('/handleCreateNewDockerServer', {
@@ -434,7 +548,7 @@
                         modal.style.display = "none";
                         loadServers(); // Reload the server list
                     } else {
-                        text = await response.text();
+                        const text = await response.text();
                         alert(text);
                     }
                 })

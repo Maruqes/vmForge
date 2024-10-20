@@ -22,6 +22,7 @@ FALTA CHECKAR PORTAS MISTURADAS DO GENERO PORTAS DO SV COM HAPOXY
 
 const HAPROXYPORT = "8080"
 const WEBSVPORT = ":9090"
+const PORT_FOR_CONTAINERS = "9091"
 const SERVER_LINK = "localhost"
 
 var auth = Auth{}
@@ -29,6 +30,11 @@ var auth = Auth{}
 type DockerConstInfo struct {
 	ImageName string `json:"imageName"`
 	Path      string `json:"path"`
+}
+
+type haproxyPortsJSON struct {
+	Port      string `json:"port"`
+	Subdomain string `json:"subdomain"`
 }
 
 var dockerConstInfo = []DockerConstInfo{
@@ -141,6 +147,31 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 	serverName := r.FormValue("serverName")
 	dockerPassword := r.FormValue("dockerPassword")
 	serverExample := r.FormValue("serverExample")
+	haproxyPortsJSONINFO := r.FormValue("haproxyPorts")
+
+	japroxyPortsJson := []haproxyPortsJSON{}
+	err = json.Unmarshal([]byte(haproxyPortsJSONINFO), &japroxyPortsJson)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("haproxyPorts are not in the correct format"))
+		return
+	}
+
+	serverName = "vmForge_" + serverName
+
+	haproxyPortsFINAL := []haproxyPorts{}
+	for i := 0; i < len(japroxyPortsJson); i++ {
+		haproxyPortsFINAL = append(haproxyPortsFINAL, haproxyPorts{serverName, japroxyPortsJson[i].Port, japroxyPortsJson[i].Subdomain})
+	}
+
+	err = check_ports(haproxyPortsFINAL)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
 
 	dockerImage := "null"
 	//check from static images
@@ -165,8 +196,6 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serverName = "vmForge_" + serverName
-
 	serverPort, err := generatePort()
 	if err != nil {
 		fmt.Println(err)
@@ -185,7 +214,7 @@ func handleCreateNewDockerServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = runDocker(dockerPassword, serverPort, dockerImage, serverName)
+	err = runDocker(dockerPassword, serverPort, dockerImage, serverName, haproxyPortsFINAL)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -298,6 +327,15 @@ func deleteServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = deleteContainer(containerID)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	fmt.Printf("Deleting server with name: %s\n", serverName)
+	err = remove_ServerPortBin(haproxyPorts{serverName, "", ""})
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -664,35 +702,16 @@ func createAdmin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func openPortRequest(w http.ResponseWriter, r *http.Request) {
-	serverName := r.FormValue("serverName")
-	if serverName == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("serverName is empty"))
+func getPorts(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
 		return
 	}
 
-	port := r.FormValue("port")
-	if port == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("port is empty"))
-		return
-	}
-
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("port is not a number"))
-		return
-	}
-
-	if portInt < 0 || portInt > 65535 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("port is invalid"))
-		return
-	}
-
-	err = openPort(serverName, port)
+	open_ports, err := readServersPorts()
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -700,7 +719,28 @@ func openPortRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	//convert to json
+	json, err := json.Marshal(open_ports)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+func getPortsForContainers(w http.ResponseWriter, r *http.Request) {
+	username, token := readUserCookies(r)
+	loginIn, err := auth.loginWithWebToken(username, token)
+	if err != nil || !loginIn {
+		w.WriteHeader(http.StatusUnauthorized)
+		redirectToLoginPage(w)
+		return
+	}
+	w.Write([]byte(PORT_FOR_CONTAINERS))
 }
 
 func runWebsite() {
@@ -736,7 +776,8 @@ func runWebsite() {
 	http.HandleFunc("/refreshCookie", refreshCookies)
 
 	//ports
-	http.HandleFunc("/portOpen", openPortRequest)
+	http.HandleFunc("/getPorts", getPorts)
+	http.HandleFunc("/getPortsForContainers", getPortsForContainers)
 
 	fmt.Println("Running website on port", WEBSVPORT)
 	log.Fatal(http.ListenAndServe(WEBSVPORT, nil))
