@@ -1,5 +1,5 @@
 # Use the official Ubuntu image as a base
-FROM ubuntu:20.04
+FROM ubuntu:latest
 
 # Install required packages: OpenSSH, SSHFS, Node.js (for JavaScript)
 RUN apt-get update && \
