@@ -50,8 +50,7 @@ func getAllServersInfo(w http.ResponseWriter, r *http.Request) {
 		redirectToLoginPage(w)
 		return
 	}
-	var foo int = 10
-	foo = foo + 1
+
 	dockerInfo := getAllDockerInfoJson()
 
 	//convert to json
